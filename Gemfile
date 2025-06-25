@@ -5,7 +5,7 @@ source 'https://rubygems.org'
 ruby '3.2.0'
 
 gem 'activerecord-sqlserver-adapter'
-gem 'ar_lazy_preload'
+gem 'ar_lazy_preload', '>= 2.0.0'
 gem 'audited'
 gem 'aws-sdk-s3'
 gem 'bootsnap', require: false
