@@ -14,10 +14,13 @@ services:
       - .env
     environment:
       - RAILS_ENV=development
+      - MOTOR_DEVELOPMENT=true
+      - MOTOR_DEV_SERVER_URL=http://motor_ui:9096/
       - WEBPACKER_DEV_SERVER_HOST=webpacker
       - WEBPACKER_DEV_SERVER_PUBLIC=localhost:3035
     depends_on:
       - webpacker
+      - motor_ui
 
   webpacker:
     build:
@@ -35,6 +38,22 @@ services:
       - RAILS_ENV=development
       - WEBPACKER_DEV_SERVER_HOST=0.0.0.0
 
+  motor_ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sh -c "cd /opt/motor-admin/vendor/motor-admin/ui && yarn serve"
+    volumes:
+      - '.:/opt/motor-admin'
+      - 'bundle_cache:/usr/local/bundle'
+      - 'node_modules:/opt/motor-admin/node_modules'
+      - 'motor_ui_node_modules:/opt/motor-admin/vendor/motor-admin/ui/node_modules'
+    ports:
+      - '9096:9096'
+    environment:
+      - NODE_ENV=development
+
 volumes:
   bundle_cache:
   node_modules:
+  motor_ui_node_modules:
