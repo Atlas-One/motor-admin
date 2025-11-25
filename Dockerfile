@@ -1,64 +1,49 @@
-FROM ruby:3.2.0-alpine as webpacker
+FROM ruby:3.2.0-alpine
 
-ENV RAILS_ENV=production
-ENV NODE_ENV=production
-
-WORKDIR /opt
-
-RUN apk add --no-cache nodejs yarn git build-base python3 && \
-    gem install shakapacker
-
-COPY ./package.json ./yarn.lock ./
-
-RUN yarn install --network-timeout 1000000
-
-COPY ./bin/webpacker ./bin/webpacker
-COPY ./config/webpack ./config/webpack
-COPY ./config/webpacker.yml ./config/webpacker.yml
-COPY ./postcss.config.js ./babel.config.js ./
-COPY ./app/packs ./app/packs
-
-RUN echo "gem 'shakapacker'" > Gemfile && ./bin/webpacker
-
-FROM ruby:3.2.0-alpine as assets
-
-WORKDIR /opt
-
-RUN apk add --no-cache nodejs yarn git build-base python3
-
-COPY ./vendor/motor-admin/ui/package.json ./vendor/motor-admin/ui/yarn.lock ./
-
-RUN yarn install --network-timeout 1000000
-
-COPY ./vendor/motor-admin/ui ./
-
-RUN yarn build:prod
-
-FROM ruby:3.2.0-alpine as app
-
-ENV RAILS_ENV=production
-ENV BUNDLE_WITHOUT="development:test"
+ENV RAILS_ENV=development
+ENV NODE_ENV=development
 
 WORKDIR /opt/motor-admin
 
-RUN apk add --no-cache freetds-dev sqlite-dev libpq-dev mariadb-dev build-base
+# Install system dependencies
+RUN apk add --no-cache \
+    nodejs \
+    yarn \
+    git \
+    build-base \
+    python3 \
+    freetds-dev \
+    sqlite-dev \
+    libpq-dev \
+    mariadb-dev \
+    tzdata
 
+# Install bundler
+RUN gem install bundler
+
+# Copy dependency files
 COPY ./Gemfile ./Gemfile.lock ./
+COPY ./package.json ./yarn.lock ./
 COPY ./vendor/motor-admin/lib/motor/version.rb ./vendor/motor-admin/lib/motor/version.rb
 COPY ./vendor/motor-admin/motor-admin.gemspec ./vendor/motor-admin/motor-admin.gemspec
 
-RUN bundle update --bundler && bundle install && rm -rf ~/.bundle
+# Install Ruby dependencies
+RUN bundle install
 
+# Install Node dependencies for main app
+RUN yarn install --network-timeout 1000000
+
+# Copy application code
 COPY . ./
 
-COPY --from=assets /opt/dist ./vendor/motor-admin/ui/dist
-COPY --from=webpacker /opt/public/packs ./public/packs
+# Build Motor Admin UI assets
+WORKDIR /opt/motor-admin/vendor/motor-admin/ui
+RUN yarn install --network-timeout 1000000 && yarn build:prod
 
-RUN bundle exec bootsnap precompile --gemfile app/ lib/
+# Return to app directory
+WORKDIR /opt/motor-admin
 
-RUN ln -s /opt/motor-admin/bin/motor-admin /usr/local/bin && chmod +x /usr/local/bin/motor-admin
+# Expose ports
+EXPOSE 3001 3035
 
-WORKDIR /app
-ENV WORKDIR=/app/
-
-CMD motor-admin
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3001"]

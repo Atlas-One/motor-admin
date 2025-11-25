@@ -32,6 +32,11 @@ Rails.application.routes.draw do
     end
   end
 
+  # Mount Motor assets without authentication (needed for sign-in page styling)
+  scope ENV.fetch('BASE_PATH', '/') do
+    get '/assets/:filename', to: 'motor/assets#show', as: :motor_asset, constraints: { filename: /.+/ }
+  end
+
   if ENV['MOTOR_PUBLIC_ACCESS'].to_s == 'true'
     mount Motor::Admin => ENV.fetch('BASE_PATH', '/')
   else

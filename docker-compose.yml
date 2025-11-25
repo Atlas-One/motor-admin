@@ -1,11 +1,40 @@
-version: '3'
-
 services:
-  app:
-    image: 'motoradmin/motoradmin:latest'
-    ports:
-      - '3000:3000'
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: bundle exec rails s -p 3001 -b '0.0.0.0'
     volumes:
-      - '.:/app'
+      - '.:/opt/motor-admin'
+      - 'bundle_cache:/usr/local/bundle'
+      - 'node_modules:/opt/motor-admin/node_modules'
+    ports:
+      - '3001:3001'
     env_file:
       - .env
+    environment:
+      - RAILS_ENV=development
+      - WEBPACKER_DEV_SERVER_HOST=webpacker
+      - WEBPACKER_DEV_SERVER_PUBLIC=localhost:3035
+    depends_on:
+      - webpacker
+
+  webpacker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ./bin/webpacker-dev-server
+    volumes:
+      - '.:/opt/motor-admin'
+      - 'bundle_cache:/usr/local/bundle'
+      - 'node_modules:/opt/motor-admin/node_modules'
+    ports:
+      - '3035:3035'
+    environment:
+      - NODE_ENV=development
+      - RAILS_ENV=development
+      - WEBPACKER_DEV_SERVER_HOST=0.0.0.0
+
+volumes:
+  bundle_cache:
+  node_modules:

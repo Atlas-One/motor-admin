@@ -7,6 +7,11 @@ module Motor
     module_function
 
     def call
+      # If local override is set, use it directly without trying to decrypt
+      if ENV['LOCAL_DB_OVERRIDE_URL'].present?
+        return use_local_override
+      end
+
       database_configs = Motor::EncryptedConfig.find_by(key: Motor::EncryptedConfig::DATABASE_CREDENTIALS_KEY)
 
       return set_demo_db unless database_configs
@@ -50,6 +55,21 @@ module Motor
 
         removed_base_class_name.deconstantize.constantize.send(:remove_const, removed_base_class_name.demodulize)
       end
+    end
+
+    def use_local_override
+      db_url = normalize_url(ENV['LOCAL_DB_OVERRIDE_URL'])
+      base_class = fetch_or_define_base_class('default')
+
+      if base_class.connection_db_config.try(:url) != db_url
+        base_class.establish_connection(url: db_url, prepared_statements: false)
+      end
+
+      Motor::DefineArModels.call(base_class)
+
+      [base_class]
+    ensure
+      @already_defined = true
     end
 
     def set_demo_db

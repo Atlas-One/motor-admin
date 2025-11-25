@@ -1,0 +1,2936 @@
+---
+engine_version: 0.4.21
+file_version: 2025-11-25 19:39:02.070966000 Z
+resources:
+- name: account
+  preferences:
+    custom_sql: "SELECT account.id, account.account_number, account.type::text ~*
+      'investor' as is_investor, (SELECT COUNT(*) FROM transaction t WHERE t.investor_id
+      = account.id AND t.type = 'contribution' AND t.status NOT IN ('cancelled', 'rejected'))
+      as contributions, (SELECT COUNT(a.id) FROM account a WHERE a.referrer_account_id
+      = account.id) as referred, account.account_number, account.type as account_type,
+      entity_profile.name as entity_name, CONCAT_WS(' ', \n    NULLIF(TRIM((entity_profile.company_address->>'unit')::text),
+      ''),\n    NULLIF(TRIM((entity_profile.company_address->>'street')::text), ''),\n
+      \   NULLIF(TRIM((entity_profile.company_address->>'city')::text), ''),\n    NULLIF(TRIM((entity_profile.company_address->>'province')::text),
+      ''),\n    NULLIF(TRIM((entity_profile.company_address->>'postalCode')::text),
+      ''),\n    NULLIF(TRIM((entity_profile.company_address->>'country')::text), '')\n)
+      as entity_company_address, account.is_referral_agent, account.referral_agent_effective_date,
+      account.status, pu.first_name as primary_user_first_name, \npu.last_name as
+      primary_user_last_name, \npu.date_of_birth as primary_user_date_of_birth, \npu.email
+      as primary_user_email, \npu.phone as primary_user_phone,\npu.sin as primary_user_sin,\nCONCAT_WS('
+      ', \n    NULLIF(TRIM((pu.residential_address->>'unit')::text), ''),\n    NULLIF(TRIM((pu.residential_address->>'street')::text),
+      ''),\n    NULLIF(TRIM((pu.residential_address->>'city')::text), ''),\n    NULLIF(TRIM((pu.residential_address->>'province')::text),
+      ''),\n    NULLIF(TRIM((pu.residential_address->>'postalCode')::text), ''),\n
+      \   NULLIF(TRIM((pu.residential_address->>'country')::text), '')\n) as primary_user_residential_address,\n(kyc_pu.provider<>''AND
+      kyc_pu.provider IS NOT NULL AND account.type::text ~* 'investor' AND (SELECT
+      COUNT(*) FROM transaction t WHERE t.investor_id = account.id AND t.type = 'contribution'
+      AND t.status NOT IN ('cancelled', 'rejected'))  = 0) AS kycd_not_invested,\n(kyc_pu.status
+      = 'pending' AND account.type::text ~* 'investor' AND (SELECT COUNT(*) FROM transaction
+      t WHERE t.investor_id = account.id AND t.type = 'contribution' AND t.status
+      NOT IN ('cancelled', 'rejected'))  = 0) AS pending_kyc_not_invested,\nkyc_pu.provider
+      AS primary_user_kyc_provider,\n\tnote_pu.content as primary_user_kyc_note,\n\tkyc_pu.status
+      AS primary_user_kyc_provider_status,\n\tkyc_pu.status AS primary_user_kyc_questions_review_status,\nkyc_pu.kyc_hits_review_status
+      AS primary_user_kyc_hits_review_status,\n\tkyc_pu.document_type AS primary_user_document_type,\n\tkyc_pu.document_number
+      AS primary_user_document_number,\n\tkyc_pu.document_valid_from AS primary_user_document_valid_from,\n\tkyc_pu.document_valid_to
+      AS primary_user_document_valid_to,\n\tkyc_pu.document_country AS primary_user_document_country,\nEXISTS
+      (\n  SELECT 1\n  FROM jsonb_array_elements(kyc_pu.veriff_report -> 'pepAndSanctions'
+      -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'pep' -> 0 IS
+      NOT NULL\n) OR (kyc_pu.onfido_report -> 'reports' -> 1 -> 'breakdown' -> 'politically_exposed_person'
+      ->> 'result' != 'clear') AS primary_user_kyc_pep_hit,\nEXISTS (\n  SELECT 1\n
+      \ FROM jsonb_array_elements(kyc_pu.veriff_report -> 'pepAndSanctions' -> 'hits')
+      AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'sanctions' -> 0 IS NOT
+      NULL\n) OR (kyc_pu.onfido_report -> 'reports' -> 1 -> 'breakdown' -> 'sanction'
+      ->> 'result' != 'clear') AS primary_user_kyc_sanctions_hit,\n EXISTS (\n  SELECT
+      1 \n  FROM jsonb_array_elements(kyc_pu.veriff_report -> 'pepAndSanctions' ->
+      'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'warnings' -> 0
+      IS NOT NULL\n) OR (kyc_pu.onfido_report -> 'reports' -> 1 -> 'breakdown' ->
+      'legal_and_regulatory_warnings' ->> 'result' != 'clear') AS primary_user_kyc_warnings_hit,\nEXISTS
+      (\n  SELECT 1\n  FROM jsonb_array_elements(kyc_pu.veriff_report -> 'pepAndSanctions'
+      -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'fitnessProbity'
+      -> 0 IS NOT NULL\n) AS primary_user_kyc_fitness_probity_hit,\nju.first_name
+      as joint_user_first_name, ju.last_name as joint_user_last_name,\nju.date_of_birth
+      as joint_user_date_of_birth,\nju.email as joint_user_email,\nju.phone as joint_user_phone,\nkyc_ju.provider
+      AS joint_user_kyc_provider,\n\tnote_ju.content as joint_user_kyc_note,\n\tkyc_ju.status
+      AS joint_user_kyc_provider_status,\n\tkyc_ju.status AS joint_user_kyc_questions_review_status,\nkyc_ju.kyc_hits_review_status
+      AS joint_user_kyc_hits_review_status,\n\tkyc_ju.document_type AS joint_user_document_type,\n\tkyc_ju.document_number
+      AS joint_user_document_number,\n\tkyc_ju.document_valid_from AS joint_user_document_valid_from,\n\tkyc_ju.document_valid_to
+      AS joint_user_document_valid_to,\n\tkyc_ju.document_country AS joint_user_document_country,\nEXISTS
+      (\n  SELECT 1\n  FROM jsonb_array_elements(kyc_ju.veriff_report -> 'pepAndSanctions'
+      -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'pep' -> 0 IS
+      NOT NULL\n) OR (kyc_ju.onfido_report -> 'reports' -> 1 -> 'breakdown' -> 'politically_exposed_person'
+      ->> 'result' != 'clear') AS joint_user_kyc_pep_hit,\nEXISTS (\n  SELECT 1\n
+      \ FROM jsonb_array_elements(kyc_ju.veriff_report -> 'pepAndSanctions' -> 'hits')
+      AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'sanctions' -> 0 IS NOT
+      NULL\n) OR (kyc_ju.onfido_report -> 'reports' -> 1 -> 'breakdown' -> 'sanction'
+      ->> 'result' != 'clear') AS joint_user_kyc_sanctions_hit,\n EXISTS (\n  SELECT
+      1 \n  FROM jsonb_array_elements(kyc_ju.veriff_report -> 'pepAndSanctions' ->
+      'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'warnings' -> 0
+      IS NOT NULL\n) OR (kyc_ju.onfido_report -> 'reports' -> 1 -> 'breakdown' ->
+      'legal_and_regulatory_warnings' ->> 'result' != 'clear') AS joint_user_kyc_warnings_hit,\nEXISTS
+      (\n  SELECT 1\n  FROM jsonb_array_elements(kyc_ju.veriff_report -> 'pepAndSanctions'
+      -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'fitnessProbity'
+      -> 0 IS NOT NULL\n) AS joint_user_kyc_fitness_probity_hit,\naccount.referrer_account_id,\naccount.referrer_account_user_id,\naccount.suitability
+      ->> 'aum' AS aum,\n  account.suitability ->> 'is_broker' AS is_broker,\n  account.suitability
+      ->> 'risk_level' AS risk_level,\n  account.suitability ->> 'updated_at' AS updated_at,\n
+      \ account.suitability ->> 'is_registrant' AS is_registrant,\n  account.suitability
+      ->> 'risk_capacity' AS risk_capacity,\n  account.suitability ->> 'risk_tolerance'
+      AS risk_tolerance,\n  account.suitability -> 'asset_allocation' AS asset_allocation,\n
+      \ account.suitability ->> 'investment_horizon' AS investment_horizon,\n  account.suitability
+      ->> 'investment_knowledge' AS investment_knowledge,\n  account.suitability ->>
+      'previous_investments' AS previous_investments,\n  account.suitability ->> 'investment_experience'
+      AS investment_experience,\n  account.suitability ->> 'investment_objectives'
+      AS investment_objectives,\n  account.suitability -> 'other_previous_investments'
+      AS other_previous_investments,\n  account.suitability ->> 'ownership_interest_primary'
+      AS ownership_interest_primary,\n  account.suitability ->> 'more_than_one_account_operator'
+      AS more_than_one_account_operator,\n  account.suitability ->> 'more_than_one_account_operator_relationship'
+      AS more_than_one_account_operator_relationship,\n  account.suitability ->> 'more_than_one_account_operator_name'
+      AS more_than_one_account_operator_name,\n  account.suitability ->> 'more_than_one_account_operator_phone'
+      AS more_than_one_account_operator_phone,\n  account.suitability ->> 'account_opened_on_behalf'
+      AS account_opened_on_behalf,\n  account.suitability ->> 'trustee_contact_person'
+      AS trustee_contact_person,\n  account.suitability ->> 'trustee_contact_person'
+      AS trustee_contact_person,\n  account.suitability ->> 'trustee_contact_person_name'
+      AS trustee_contact_person_name,\n  account.suitability ->> 'trustee_contact_person_phone'
+      AS trustee_contact_person_phone,\n  account.suitability ->> 'confirm_investment_single_offering'
+      AS confirm_investment_single_offering,\n  account.suitability ->> 'more_than_25_percent_or_politically_exposed'
+      AS more_than_25_percent_or_politically_exposed,\n  account.suitability ->> 'employment_status'
+      AS employment_status,\n  account.suitability ->> 'politically_exposed' AS politically_exposed,\n
+      \ account.suitability ->> 'net_financial_assets' AS net_financial_assets,\n
+      \ account.suitability ->> 'using_borrowed_money' AS using_borrowed_money,\n
+      \ account.suitability ->> 'pre_tax_annual_income' AS pre_tax_annual_income,\n
+      \ account.suitability ->> 'insider_reporting_issuer' AS insider_reporting_issuer,\n
+      \ account.suitability ->> 'other_previous_investments' AS other_previous_investments\n
+      \ FROM account left join entity_profile on entity_profile.id = account.entity_id
+      left join user_profile pu on pu.id = account.primary_user_id left join user_profile
+      ju on ju.id = account.secondary_user_id left join kyc kyc_pu ON kyc_pu.user_id
+      = account.primary_user_id left join kyc kyc_ju ON kyc_ju.user_id = account.secondary_user_id\n
+      \ left join note note_pu ON note_pu.id = kyc_pu.note_id\n  left join note note_ju
+      ON note_ju.id = kyc_ju.note_id"
+    actions:
+    - visible: false
+      name: create
+    - visible: false
+      name: edit
+    - visible: false
+      name: remove
+    tabs:
+    - visible: false
+      name: notes
+    - tab_type: query
+      preferences:
+        query_id: 5
+      name: audits
+    searchable_columns:
+    - id
+    - primary_user_email
+    - secondary_user_email
+    - entity_name
+    - joint_user_first_name
+    - joint_user_last_name
+    - primary_user_phone
+    - joint_user_email
+    - joint_user_phone
+    - primary_user_last_name
+    - primary_user_first_name
+    associations:
+    - name: transactions
+      display_name: Transactions
+      model_name: transaction
+      foreign_key: investor_id
+      primary_key: id
+      virtual: true
+      polymorphic: false
+      slug: transactions
+    - name: notes
+      display_name: Notes
+      model_name: note
+      foreign_key: account_id
+      primary_key: id
+      virtual: true
+      polymorphic: false
+      slug: notes
+    - name: account_users
+      display_name: Users
+      model_name: account_user
+      foreign_key: account_id
+      primary_key: id
+      virtual: true
+      polymorphic: false
+      slug: account_users
+    - name: referrals
+      display_name: Referrals
+      model_name: account
+      foreign_key: referrer_account_id
+      primary_key: id
+      virtual: true
+      polymorphic: false
+      slug: referrals
+    scopes:
+    - name: invested
+      display_name: Invested
+      scope_type: filter
+      preferences:
+        filter:
+        - contributions:
+            gt: 0
+    - name: pending_kyc_not_invested
+      display_name: Pending KYC Not Invested
+      scope_type: filter
+      preferences:
+        filter:
+        - pending_kyc_not_invested:
+            eq: true
+    - name: referral_agents
+      display_name: Referral Agents
+      scope_type: filter
+      preferences:
+        filter:
+        - account_type:
+            eq: individual_referral_agent
+        - OR
+        - account_type:
+            eq: entity_referral_agent
+    - name: issuers
+      display_name: Issuers
+      scope_type: filter
+      preferences:
+        filter:
+        - account_type:
+            eq: issuer
+    - name: kycd_not_invested_
+      display_name: 'KYCd Not Invested '
+      scope_type: filter
+      preferences:
+        filter:
+        - kycd_not_invested:
+            eq: true
+    columns:
+    - name: referrals
+      display_name: Referrals
+      column_type: integer
+      access_type: read_only
+      reference:
+        name: referrals
+        display_name: Referrals
+        reference_type: belongs_to
+        foreign_key: referrals
+        primary_key: id
+        options: {}
+        polymorphic: false
+        virtual: true
+      virtual: false
+      format: {}
+      validators: []
+      description: ''
+  updated_at: 2025-05-28 16:27:03.674577000 +00:00
+- name: account_user
+  preferences:
+    custom_sql: "SELECT x.*, (SELECT COUNT(a.*) FROM account a WHERE a.referrer_account_user_id
+      = x.id) as referred FROM (select\nDISTINCT ON (account.id, account_user.id)\naccount_user.id,\naccount.type
+      as account_type,\naccount.id as account_id,\naccount.account_number as account_number,
+      \naccount.risk_rating as account_risk_rating,\nentity_profile.name as entity_name,\naccount_user.type
+      as user_type,\nuser_profile.first_name, \nuser_profile.last_name, \nuser_profile.email,\naccount_user.is_director
+      as is_director,\naccount_user.shareholder_percentage_ownership as shareholder_percentage_ownership,\nkyc.provider
+      AS kyc_provider,\nkyc.status as kyc_provider_status,\nEXISTS (\n  SELECT 1\n
+      \ FROM jsonb_array_elements(kyc.veriff_report -> 'pepAndSanctions' -> 'hits')
+      AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'pep' -> 0 IS NOT NULL\n)
+      OR (kyc.onfido_report -> 'reports' -> 1 -> 'breakdown' -> 'politically_exposed_person'
+      ->> 'result' != 'clear') AS kyc_pep_hit,\nEXISTS (\n  SELECT 1\n  FROM jsonb_array_elements(kyc.veriff_report
+      -> 'pepAndSanctions' -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch'
+      -> 'sanctions' -> 0 IS NOT NULL\n) OR (kyc.onfido_report -> 'reports' -> 1 ->
+      'breakdown' -> 'sanction' ->> 'result' != 'clear') AS kyc_sanctions_hit,\n EXISTS
+      (\n  SELECT 1 \n  FROM jsonb_array_elements(kyc.veriff_report -> 'pepAndSanctions'
+      -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'warnings' ->
+      0 IS NOT NULL\n) OR (kyc.onfido_report -> 'reports' -> 1 -> 'breakdown' -> 'legal_and_regulatory_warnings'
+      ->> 'result' != 'clear') AS kyc_warnings_hit,\nEXISTS (\n  SELECT 1\n  FROM
+      jsonb_array_elements(kyc.veriff_report -> 'pepAndSanctions' -> 'hits') AS hits\n
+      \ WHERE hits -> 'listingsRelatedToMatch' -> 'fitnessProbity' -> 0 IS NOT NULL\n)
+      AS kyc_fitness_probity_hit,\nkyc.kyc_hits_review_status,\nkyc.kyc_questions_review_status,\nkyc.document_type
+      AS kyc_document_type,\nkyc.document_number AS kyc_document_number,\nkyc.document_country
+      AS kyc_document_country,\nkyc.document_valid_from AS kyc_document_issuing_date,\nkyc.document_valid_to
+      AS kyc_document_expiry_date\nfrom account_user \ninner join account on account.id
+      = account_user.account_id \ninner join user_profile on user_profile.id = account_user.user_id
+      \nleft join entity_profile on entity_profile.id = account.entity_id \ninner
+      join kyc on kyc.user_id = user_profile.id \nleft join transaction on transaction.investor_id
+      = account.id\norder by\naccount.id,\naccount_user.id) as x ORDER BY\nkyc_pep_hit
+      DESC NULLS LAST,\nkyc_sanctions_hit DESC NULLS LAST,\nkyc_warnings_hit DESC
+      NULLS LAST,\nkyc_fitness_probity_hit DESC NULLS LAST,\nCASE WHEN kyc_provider_status
+      = 'pending' THEN 1 ELSE 2 END DESC NULLS LAST"
+    associations:
+    - name: accounts
+      display_name: Accounts
+      model_name: account
+      foreign_key: id
+      primary_key: account_id
+      virtual: true
+      polymorphic: false
+      slug: accounts
+    - name: transactions
+      display_name: Transactions
+      model_name: transaction
+      foreign_key: investor_id
+      primary_key: account_id
+      virtual: true
+      polymorphic: false
+      slug: transactions
+    - name: referrals
+      display_name: Referred
+      model_name: account
+      foreign_key: referrer_account_user_id
+      primary_key: id
+      virtual: true
+      polymorphic: false
+      slug: referrals
+    scopes:
+    - name: investor
+      display_name: Investor
+      scope_type: filter
+      preferences:
+        filter:
+        - account_type:
+            eq: individual_investor
+        - OR
+        - account_type:
+            eq: entity_investor
+        - OR
+        - account_type:
+            eq: joint_investor
+        sort:
+          key: referred
+          order: asc
+    - name: referral_agent
+      display_name: Referral Agent
+      scope_type: filter
+      preferences:
+        filter:
+        - account_type:
+            eq: entity_referral_agent
+        - OR
+        - account_type:
+            eq: individual_referral_agent
+        sort:
+          key: referred
+          order: desc
+    - name: admin
+      display_name: Admin
+      scope_type: filter
+      preferences:
+        filter:
+        - account_type:
+            eq: admin
+    - name: issuer
+      display_name: Issuer
+      scope_type: filter
+      preferences:
+        filter:
+        - account_type:
+            eq: issuer
+        sort:
+          key: referred
+          order: asc
+  updated_at: 2024-03-29 14:35:46.980799000 +00:00
+- name: account_wallet
+  preferences:
+    columns:
+    - column_type: reference
+      reference:
+        name: account
+        display_name: Account
+        model_name: account
+        reference_type: belongs_to
+        foreign_key: account_id
+        primary_key: id
+        options: {}
+        polymorphic: false
+        virtual: true
+      name: account_id
+  updated_at: 2024-03-15 19:05:08.996534000 +00:00
+- name: active_storage/attachment
+  preferences: {}
+  updated_at: 2024-02-27 22:42:12.103733000 +00:00
+- name: audit
+  preferences:
+    associations:
+    - name: account_user
+      display_name: Account User
+      model_name: account_user
+      foreign_key: user_id
+      primary_key: actor_id
+      virtual: true
+      polymorphic: false
+      slug: account_user
+    columns:
+    - name: actor_name
+      display_name: Actor Name
+      column_type: string
+      access_type: read_write
+      virtual: true
+      format: {}
+      validators: []
+    custom_sql: SELECT "audit"."created_at", "audit"."updated_at", "audit"."deleted_at",
+      "audit"."id", "audit"."actor_id", "user_profile"."first_name" as "actor_first_name",
+      "user_profile"."last_name" as "actor_last_name", "audit"."role_assumed_by_id",
+      "audit"."actor_ip", "audit"."resource_name", "audit"."resource_id", "audit"."action",
+      "audit"."description", "audit"."old_data", "audit"."new_data", "audit"."request",
+      "audit"."response", "audit"."migrate_from", "audit"."migration_data" FROM "audit"
+      left join "account_user" on "account_user"."id" = "actor_id"  left join "user_profile"
+      on "user_profile"."id" = "account_user"."user_id" order by created_at DESC
+    actions:
+    - visible: false
+      name: create
+    - visible: false
+      name: edit
+    - visible: false
+      name: remove
+  updated_at: 2024-03-26 17:37:27.345769000 +00:00
+- name: bank_account
+  preferences:
+    custom_sql: "SELECT  bank_account.id, account.id as account_id, account.type as
+      account_type, \"bank_account\".*, en.name as entity_name, pu.first_name, pu.last_name,
+      pu.email, pu.phone, ju.first_name as joint_user_first_name, pu.last_name as
+      joint_user_last_name, ju.email as joint_user_email, ju.phone as joint_user_phone\nFROM
+      \"bank_account\" \nleft join account on account.id = bank_account.account_id\nleft
+      join user_profile pu on pu.id = account.primary_user_id\nleft join user_profile
+      ju on ju.id = account.secondary_user_id\nleft join entity_profile en on en.id
+      = account.entity_id"
+    columns:
+    - access_type: hidden
+      name: account_id
+    tabs:
+    - visible: false
+      name: audits
+    - visible: false
+      name: notes
+    associations:
+    - name: transactions
+      display_name: Transactions
+      model_name: transaction
+      foreign_key: investor_id
+      primary_key: account_id
+      virtual: true
+      polymorphic: false
+      slug: transactions
+    - name: account
+      display_name: Account
+      model_name: account
+      foreign_key: id
+      primary_key: account_id
+      virtual: true
+      polymorphic: false
+      slug: account
+  updated_at: 2024-03-28 14:24:46.329167000 +00:00
+- name: blockchain_contract
+  preferences:
+    visible: false
+  updated_at: 2024-02-27 22:43:07.639323000 +00:00
+- name: blockchain_network
+  preferences:
+    visible: false
+  updated_at: 2024-02-27 22:43:08.804563000 +00:00
+- name: country
+  preferences:
+    tabs:
+    - tab_type: query
+      preferences:
+        query_id: 17
+      name: details
+    columns:
+    - name: customer_id
+      display_name: Customer
+      column_type: reference
+      access_type: read_only
+      reference:
+        name: customer
+        display_name: Customer
+        model_name: customer
+        reference_type: belongs_to
+        foreign_key: customer_id
+        primary_key: id
+        options: {}
+        polymorphic: false
+        virtual: true
+      virtual: false
+      format: {}
+    associations:
+    - name: customers
+      display_name: Customers
+      model_name: customer
+      icon: user-check
+      foreign_key: country_code
+      primary_key: code
+      virtual: true
+      polymorphic: false
+      slug: customers
+    - name: orders
+      display_name: Orders
+      model_name: order
+      foreign_key: customer_id
+      primary_key: id
+      options:
+        through: customers
+        source: orders
+      virtual: true
+      polymorphic: false
+      slug: orders
+    custom_sql: |-
+      SELECT co.*, count(cs.id) as customers_count FROM countries as co
+      JOIN customers as cs ON cs.country_code = co.code
+      GROUP BY co.id
+  updated_at: 2021-12-04 10:25:38.021847000 +00:00
+- name: customer
+  preferences:
+    columns:
+    - display_name: Country
+      name: country_code
+    - display_name: Type
+      name: kind
+    - name: sales_per_year
+      display_name: Sales per year
+      column_type: chart
+      access_type: read_only
+      default_value: ''
+      virtual: true
+      format: {}
+    - name: monthly_sales_diff
+      display_name: Monthly sales diff
+      column_type: change
+      access_type: read_only
+      default_value: ''
+      virtual: true
+      format: {}
+    - column_type: percentage
+      default_value: ''
+      name: reputation
+    - name: lifetime_value
+      display_name: Lifetime value
+      column_type: currency
+      access_type: read_only
+      virtual: false
+      format:
+        currency: USD
+        currency_base: cents
+    scopes:
+    - display_name: VIP
+      name: vip
+    tabs:
+    - name: sales
+      display_name: Sales
+      tab_type: dashboard
+      preferences:
+        dashboard_id: 2
+    custom_sql: |-
+      SELECT cs.*, sum(li.quantity * li.unit_price) as lifetime_value FROM customers as cs
+      LEFT JOIN orders as od ON od.customer_id = cs.id
+      LEFT JOIN line_items as li ON od.id = li.order_id
+      GROUP BY cs.id
+  updated_at: 2021-07-15 17:23:20.368063000 +00:00
+- name: distribution
+  preferences:
+    visible: false
+  updated_at: 2024-02-27 22:43:12.932862000 +00:00
+- name: distribution_checkpoint
+  preferences:
+    columns:
+    - access_type: hidden
+      name: dps
+    - access_type: hidden
+      name: resolution_id
+    - access_type: hidden
+      name: migrate_from
+    - access_type: hidden
+      name: migration_data
+    - access_type: hidden
+      name: shares
+    visible: false
+  updated_at: 2024-03-22 07:45:02.498994000 +00:00
+- name: distribution_resolution
+  preferences:
+    visible: false
+  updated_at: 2024-02-27 22:43:11.782576000 +00:00
+- name: document_template
+  preferences:
+    visible: false
+  updated_at: 2024-02-27 23:13:06.810289000 +00:00
+- name: kyc
+  preferences:
+    actions:
+    - visible: false
+      name: create
+    - visible: false
+      name: edit
+    - visible: false
+      name: remove
+    tabs:
+    - visible: false
+      name: audits
+    - visible: false
+      name: notes
+    custom_sql: "SELECT\nkyc.id,\nuser_profile.first_name as first_name,\nuser_profile.last_name
+      as last_name,\nuser_profile.email as email,\nuser_profile.phone as phone,\nuser_profile.accreditation_status
+      as accreditation_status,\nuser_profile.accreditation_criteria as accreditation_qualification,\n\tkyc.provider
+      AS kyc_provider,\n\tkyc.status AS kyc_provider_status,\nkyc.kyc_date as kyc_date,\n\tnote.content
+      as note,\n\tkyc.status AS kyc_questions_review_status,\nkyc.kyc_hits_review_status
+      AS kyc_hits_review_status,\n\tkyc.document_type AS document_type,\n\tkyc.document_number
+      AS document_number,\n\tkyc.document_valid_from AS document_valid_from,\n\tkyc.document_valid_to
+      AS document_valid_to,\n\tkyc.document_country AS document_country,\nEXISTS (\n
+      \ SELECT 1\n  FROM jsonb_array_elements(kyc.veriff_report -> 'pepAndSanctions'
+      -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'pep' -> 0 IS
+      NOT NULL\n) OR (kyc.onfido_report -> 'reports' -> 1 -> 'breakdown' -> 'politically_exposed_person'
+      ->> 'result' != 'clear') AS kyc_pep_hit,\nEXISTS (\n  SELECT 1\n  FROM jsonb_array_elements(kyc.veriff_report
+      -> 'pepAndSanctions' -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch'
+      -> 'sanctions' -> 0 IS NOT NULL\n) OR (kyc.onfido_report -> 'reports' -> 1 ->
+      'breakdown' -> 'sanction' ->> 'result' != 'clear') AS kyc_sanctions_hit,\n EXISTS
+      (\n  SELECT 1 \n  FROM jsonb_array_elements(kyc.veriff_report -> 'pepAndSanctions'
+      -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'warnings' ->
+      0 IS NOT NULL\n) OR (kyc.onfido_report -> 'reports' -> 1 -> 'breakdown' -> 'legal_and_regulatory_warnings'
+      ->> 'result' != 'clear') AS kyc_warnings_hit,\nEXISTS (\n  SELECT 1\n  FROM
+      jsonb_array_elements(kyc.veriff_report -> 'pepAndSanctions' -> 'hits') AS hits\n
+      \ WHERE hits -> 'listingsRelatedToMatch' -> 'fitnessProbity' -> 0 IS NOT NULL\n)
+      AS kyc_fitness_probity_hit\n\nFROM \n\nkyc\n\nleft join user_profile ON kyc.user_id
+      = user_profile.id\nleft join note ON note.id = kyc.note_id"
+    display_name: KYC
+    columns:
+    - name: accounts
+      display_name: Accounts
+      column_type: reference
+      access_type: read_only
+      reference:
+        name: accounts
+        display_name: Accounts
+        model_name: account
+        reference_type: belongs_to
+        foreign_key: accounts
+        primary_key: account_number
+        options: {}
+        polymorphic: false
+        virtual: true
+      virtual: false
+      format: {}
+      validators: []
+      description: ''
+    scopes:
+    - name: veriff
+      display_name: Veriff
+      scope_type: filter
+      preferences:
+        filter:
+        - kyc_provider:
+            eq: veriff
+    - name: manual
+      display_name: Manual
+      scope_type: filter
+      preferences:
+        filter:
+        - kyc_provider:
+            eq: manual
+    - name: onfido
+      display_name: Onfido
+      scope_type: filter
+      preferences:
+        filter:
+        - kyc_provider:
+            eq: onfido
+  updated_at: 2025-07-02 16:16:17.040697000 +00:00
+- name: line_item
+  preferences:
+    columns:
+    - column_type: currency
+      default_value: ''
+      format:
+        currency: USD
+        currency_base: cents
+      name: unit_price
+    visible: false
+  updated_at: 2021-12-04 10:25:38.023578000 +00:00
+- name: migration
+  preferences:
+    visible: false
+  updated_at: 2024-02-27 23:10:25.380912000 +00:00
+- name: note
+  preferences:
+    custom_sql: "SELECT \n    coalesce(ie.name, e.name) as entity_name, \n    coalesce(user_profile.first_name,
+      ipu.first_name, pu.first_name) as first_name, \n    coalesce(user_profile.last_name,
+      ipu.last_name, pu.last_name) as last_name, \n    x.* \nFROM (\n    (\n        SELECT
+      \n            \"note\".\"id\",\n            note.type,\n            \"note\".\"content\"
+      as \"note\",\n            note.transaction_id,\n            note.account_id,\n
+      \           note.user_id as \"user_profile_id\",\n            \"note\".\"created_at\"::date
+      ,\n            \"note\".\"updated_at\"::date\n        FROM \"note\"\n    )\n
+      \   UNION\n    (\n        SELECT \n            'dealing-rep-suitability-note-'
+      || \"transaction\".\"id\", \n            'suitability' as \"type\", \n            \"transaction\".\"suitability_notes\"->>'dealing_rep_note'
+      as \"note\", \n            transaction.id as transaction_id,\n            transaction.investor_id
+      as account_id,\n            null as \"user_profile_id\",\n            coalesce((\"transaction\".\"suitability_notes\"->>'dealing_rep_note_created_at')::date,\n
+      \           \"transaction\".\"created_at\"::date) as \"created_at\",\n            coalesce((\"transaction\".\"suitability_notes\"->>'dealing_rep_note_updated_at')::date,\n
+      \           \"transaction\".\"updated_at\"::date) as \"updated_at\"\n        FROM
+      \"transaction\"\n        WHERE\n            \"transaction\".\"type\" = 'contribution'
+      and \n            \"transaction\".\"suitability_notes\"->'dealing_rep_note'
+      is not null and \n            \"transaction\".\"suitability_notes\"->>'dealing_rep_note'
+      != ''\n    ) \n    UNION\n    (\n        SELECT \n            'cco-suitability-note-'
+      ||  \"transaction\".\"id\", \n            'suitability' as \"type\", \n            \"transaction\".\"suitability_notes\"->>'cco_note'
+      as \"note\", \n            transaction.id as transaction_id, \n            transaction.investor_id
+      as account_id, \n            null as \"user_profile_id\", \n            coalesce((\"transaction\".\"suitability_notes\"->>'cco_note_created_at')::date,
+      \n            \"transaction\".\"created_at\"::date) as \"created_at\", \n            coalesce((\"transaction\".\"suitability_notes\"->>'cco_note_updated_at')::date,
+      \n            \"transaction\".\"updated_at\"::date) as \"updated_at\"\n        FROM
+      \"transaction\"\n        WHERE \n            \"transaction\".\"type\" = 'contribution'
+      and \n            \"transaction\".\"suitability_notes\"->'cco_note' is not null
+      and \n            \"transaction\".\"suitability_notes\"->>'cco_note' != ''\n
+      \   )\n) as x\nLEFT JOIN account on account.id = x.account_id\nLEFT JOIN entity_profile
+      e on e.id = account.entity_id\nLEFT JOIN user_profile pu on pu.id = account.primary_user_id\nLEFT
+      JOIN transaction on transaction.id = x.transaction_id\nLEFT JOIN account i on
+      i.id = transaction.investor_id\nLEFT JOIN entity_profile ie on ie.id = i.entity_id\nLEFT
+      JOIN user_profile ipu on ipu.id = i.primary_user_id\nLEFT JOIN user_profile
+      on user_profile.id = x.user_profile_id\nORDER BY created_at DESC"
+    columns:
+    - name: user_profile_id
+      display_name: User
+      column_type: string
+      access_type: read_only
+      virtual: false
+      format: {}
+      validators: []
+      description: ''
+    tabs:
+    - visible: false
+      name: audits
+    - visible: false
+      name: notes
+    actions:
+    - visible: false
+      name: create
+    - visible: false
+      name: edit
+    - visible: false
+      name: remove
+    associations:
+    - name: account
+      display_name: Accounts
+      model_name: account
+      foreign_key: id
+      primary_key: account_id
+      virtual: true
+      polymorphic: false
+      slug: account
+    - name: account_users
+      display_name: Account Users
+      model_name: account_user
+      foreign_key: account_id
+      primary_key: account_id
+      virtual: true
+      polymorphic: false
+      slug: account_users
+    - name: user_profile
+      display_name: User Profile
+      model_name: user_profile
+      foreign_key: id
+      primary_key: user_profile_id
+      virtual: true
+      polymorphic: false
+      slug: user_profile
+    scopes:
+    - name: kyc
+      display_name: KYC
+      scope_type: filter
+      preferences:
+        filter:
+        - type:
+            eq: kyc
+    - name: suitability
+      display_name: Suitability
+      scope_type: filter
+      preferences:
+        filter:
+        - type:
+            eq: suitability
+    - name: other
+      display_name: Other
+      scope_type: filter
+      preferences:
+        filter:
+        - type:
+            neq: kyc
+        - type:
+            neq: suitability
+  updated_at: 2024-06-03 18:18:23.040789000 +00:00
+- name: offer
+  preferences:
+    preferences:
+      display_as: kanban
+      kanban_column: status
+      kanban_card_columns:
+      - id
+      - symbol
+      - name
+      - offer_size
+      - minimum_investment
+      - maximum_investment
+      - minimum_subsequent_investments
+    actions:
+    - visible: false
+      name: create
+    - visible: false
+      name: edit
+    - visible: false
+      name: remove
+  updated_at: 2024-03-25 18:53:22.840837000 +00:00
+- name: offer_dealing_rep
+  preferences:
+    actions:
+    - visible: false
+      name: create
+    - visible: false
+      name: edit
+    - visible: false
+      name: remove
+    custom_sql: "SELECT \n\"offer_dealing_rep\".id,\nuser_profile.first_name,\nuser_profile.last_name,\nuser_profile.email,\noffer.symbol,\noffer.name,\noffer_dealing_rep.condition
+      IS NULL as global_condition,\ncoalesce(offer_dealing_rep.condition->'and'->0->'in'->>1,
+      account_user.dealing_rep_condition->'and'->0->'in'->>1) as provice_condition\nFROM
+      offer_dealing_rep\nLEFT JOIN offer ON offer.symbol = offer_dealing_rep.offer_symbol\nLEFT
+      JOIN account_user ON account_user.id = offer_dealing_rep.account_user_id\nLEFT
+      JOIN user_profile ON user_profile.id = account_user.user_id"
+  updated_at: 2024-03-28 13:56:44.829445000 +00:00
+- name: offer_document
+  preferences:
+    visible: false
+  updated_at: 2024-03-20 18:54:00.101329000 +00:00
+- name: offer_engagement
+  preferences:
+    custom_sql: "SELECT\ne.id,\ne.offer_symbol,\noffer.name as offer_name,\naccount.type
+      as account_type,\ne.account_id as account_id,\naccount.account_number,\nen.name
+      as entity_name,\npu.first_name,\npu.last_name,\npu.email,\nju.first_name as
+      joint_user_first_name,\nju.last_name as joint_user_last_name,\nju.email as joint_user_email,\nCASE
+      \n  WHEN EXISTS (\n    SELECT 1 FROM transaction WHERE transaction.investor_id
+      = e.account_id\n  ) THEN 'invested'\n  WHEN EXISTS (\n      SELECT 1 \n      FROM
+      jsonb_each_text(e.time_spent) as each_document\n      WHERE each_document.key
+      LIKE 'Document%'\n    ) THEN 'viewed_documents'\n  ELSE 'viewed' \nEND as state,\ne.viewed_at,\n
+      ARRAY(\n    SELECT key\n    FROM jsonb_each_text(e.time_spent)\n    WHERE key
+      LIKE 'Document%'\n  ) AS documents_viewed\nFROM \n\"offer_engagement\" e \nleft
+      join offer on offer.symbol = e.offer_symbol\nleft join account on account.id
+      = e.account_id\nleft join user_profile pu on pu.id = account.primary_user_id\nleft
+      join user_profile ju on ju.id = account.secondary_user_id\nleft join entity_profile
+      en on en.id = account.entity_id\nWHERE\naccount.type not in ('admin', 'issuer')"
+    searchable_columns:
+    - id
+    - offer_symbol
+    - account_number
+    - entity_name
+    - first_name
+    - last_name
+    - joint_first_name
+    - joint_last_name
+    scopes:
+    - name: viewed
+      display_name: Viewed
+      scope_type: filter
+      preferences:
+        filter:
+        - state:
+            eq: viewed
+    - name: viewed_documents
+      display_name: Viewed Documents
+      scope_type: filter
+      preferences:
+        filter:
+        - state:
+            eq: viewed_documents
+    - name: invested
+      display_name: Invested
+      scope_type: filter
+      preferences:
+        filter:
+        - state:
+            eq: invested
+    tabs:
+    - visible: false
+      name: audits
+    - visible: false
+      name: notes
+    associations:
+    - name: account
+      display_name: Account
+      model_name: account
+      foreign_key: id
+      primary_key: account_id
+      virtual: true
+      polymorphic: false
+      slug: account
+    - name: transactions
+      display_name: Transactions
+      model_name: transaction
+      foreign_key: investor_id
+      primary_key: account_id
+      virtual: true
+      polymorphic: false
+      slug: transactions
+    actions:
+    - visible: false
+      name: edit
+    - visible: false
+      name: create
+    - visible: false
+      name: remove
+    columns:
+    - display_name: Account id
+      name: account_id
+  updated_at: 2024-06-21 14:11:29.092461000 +00:00
+- name: offer_group_tag
+  preferences:
+    visible: false
+  updated_at: 2024-03-20 18:50:26.072798000 +00:00
+- name: offer_group_tags_offer_group_tag
+  preferences:
+    visible: false
+  updated_at: 2024-03-20 18:50:24.992571000 +00:00
+- name: offer_referrer
+  preferences:
+    custom_sql: SELECT "offer_referrer".id, offer.symbol as offer_symbol, offer.name
+      as offer_name, entity_profile.name as entity_name, user_profile.first_name,
+      user_profile.last_name, offer_referrer.commission FROM "offer_referrer" LEFT
+      JOIN account ON account.id = offer_referrer.referral_agent_id LEFT JOIN user_profile
+      ON user_profile.id = account.primary_user_id LEFT JOIN entity_profile ON entity_profile.id
+      = account.entity_id LEFT JOIN offer ON offer.symbol = offer_referrer.offer_symbol
+    columns:
+    - display_name: Referral agent (account id)
+      name: referral_agent_id
+  updated_at: 2024-06-19 18:37:42.266788000 +00:00
+- name: offer_tag
+  preferences:
+    visible: false
+  updated_at: 2024-03-20 18:50:24.295969000 +00:00
+- name: offer_tags_offer_tag
+  preferences:
+    visible: false
+  updated_at: 2024-03-20 18:50:23.187858000 +00:00
+- name: offer_tags_tag
+  preferences:
+    visible: false
+  updated_at: 2024-03-20 18:50:22.603002000 +00:00
+- name: offer_update
+  preferences:
+    columns:
+    - column_type: reference
+      reference:
+        name: nav
+        display_name: Nav
+        model_name: offer_price
+        reference_type: belongs_to
+        foreign_key: nav_id
+        primary_key: id
+        options: {}
+        polymorphic: false
+        virtual: true
+      name: nav_id
+    - column_type: reference
+      reference:
+        name: document
+        display_name: Document
+        model_name: document
+        reference_type: belongs_to
+        foreign_key: document_id
+        primary_key: id
+        options: {}
+        polymorphic: false
+        virtual: true
+      name: document_id
+  updated_at: 2024-03-20 18:50:48.580890000 +00:00
+- name: order
+  preferences:
+    actions:
+    - name: mark_as_shipped
+      display_name: Mark as Shipped
+      action_type: method
+      preferences:
+        method_name: ship!
+    - name: cancel
+      display_name: Cancel
+      action_type: form
+      preferences:
+        form_id: 1
+    - action_type: form
+      preferences:
+        form_id: 2
+      name: create
+    columns:
+    - name: total_price
+      display_name: Total price
+      column_type: currency
+      access_type: read_only
+      virtual: true
+      format:
+        currency: USD
+        currency_base: cents
+    - name: map_link
+      display_name: Map link
+      column_type: link
+      access_type: read_write
+      default_value: ''
+      virtual: true
+      format:
+        link_text: "\U0001F4CD Map"
+  updated_at: 2021-12-04 10:25:38.026092000 +00:00
+- name: order_note
+  preferences:
+    display_name: Notes
+  updated_at: 2021-12-04 10:25:38.027365000 +00:00
+- name: platform_custody_wallet
+  preferences:
+    visible: false
+  updated_at: 2024-02-27 23:11:53.509985000 +00:00
+- name: product
+  preferences:
+    columns:
+    - column_type: currency
+      default_value: ''
+      format:
+        currency: USD
+        currency_base: cents
+      name: price
+    - access_type: hidden
+      name: slug
+    - column_type: richtext
+      default_value: ''
+      name: description
+    associations:
+    - visible: false
+      name: line_items
+  updated_at: 2021-12-04 10:25:38.028556000 +00:00
+- name: redemption
+  preferences:
+    visible: false
+  updated_at: 2024-02-27 22:44:25.134531000 +00:00
+- name: redemption_transaction
+  preferences:
+    visible: false
+  updated_at: 2024-02-27 22:44:24.008462000 +00:00
+- name: registered_account
+  preferences:
+    actions:
+    - visible: false
+      name: remove
+    - visible: false
+      name: create
+    - visible: false
+      name: edit
+    custom_sql: SELECT registered_account.id, registered_account.type, registered_account.trust_company,
+      registered_account.account_number, en.name as entity_name, pu.first_name, pu.last_name,
+      pu.email, pu.phone, ju.first_name as joint_user_first_name, pu.last_name as
+      joint_user_last_name, ju.email as joint_user_email, ju.phone as joint_user_phone
+      FROM "registered_account" left join account on account.id = registered_account.account_id
+      left join user_profile pu on pu.id = account.primary_user_id left join user_profile
+      ju on ju.id = account.secondary_user_id left join entity_profile en on en.id
+      = account.entity_id
+  updated_at: 2024-03-14 15:13:46.987130000 +00:00
+- name: subscription_template
+  preferences:
+    display_name: Offer Subscription Templates
+    visible: false
+  updated_at: 2024-03-27 07:22:20.642906000 +00:00
+- name: subscription_template_signer
+  preferences:
+    display_name: Offer Subscription Template Signers
+    visible: false
+  updated_at: 2024-03-27 07:22:21.845679000 +00:00
+- name: tag
+  preferences:
+    visible: false
+  updated_at: 2024-03-20 18:50:22.195974000 +00:00
+- name: transaction
+  preferences:
+    actions:
+    - visible: false
+      name: remove
+    - visible: false
+      name: edit
+    - visible: false
+      name: create
+    custom_sql: "SELECT\n\t*\nFROM\n\t(\n\t\tSELECT DISTINCT\n\t\t\ttransaction.id,\n\t\t\ttransaction.type,\n\t\t\ttransaction.service_type,\n\t\t\ttransaction.status,\n\t\t\ttransaction.suitability_notes
+      ->> 'approved' AS suitability_approved,\n\t\t\t(transaction.suitability_notes
+      ->> 'approved_created_at')::date AS suitability_approved_at,\n\t\t\ttransaction.suitability_notes
+      ->> 'dealing_rep_note' AS suitability_dealing_rep_note,\n\t\t\t(transaction.suitability_notes
+      ->> 'dealing_rep_note_created_at')::date AS suitability_dealing_rep_note_created_at,\n\t\t\ttransaction.suitability_notes
+      ->> 'cco_note' AS suitability_cco_note,\n\t\t\t(transaction.suitability_notes
+      ->> 'cco_note_created_at')::date AS suitability_cco_note_created_at,\n\t\t\ttransaction.created_at::date,\n\t\t\ttransaction.updated_at::date,\n\t\t\ttransaction.completed_at::date,\n\t\t\ttransaction.distribution_date::date,\n\t\t\ttransaction.maturity_date::date,\n\t\t\ttransaction.offer_type,\n\t\t\ttransaction.offer_symbol,\n\t\t\ttransaction.transferred_from_offer_symbol,\n\t\t\toffer.name
+      AS offer_name,\n\t\t\toffer.currency_code AS offer_currency,\n\t\t\ttransaction.used_ffbe
+      AS used_ffba,\n\t\t\ttransaction.ffba_name,\n\t\t\ttransaction.ffba_email,\n\t\t\ttransaction.ffba_phone,\n\t\t\ttransaction.ffba_position,\n\t\t\ttransaction.ffba_association,\n\t\t\ttransaction.ffba_relationship,\n\t\t\ttransaction.ffba_duration,\n\t\t\ttransaction.ffba_family_relationship,\n\t\t\toffer.has_distributions
+      AS offer_has_distributions,\n\t\t\ttransaction.prefers_drip,\n\t\t\ttransaction.payment_method,\n\t\t\ttransaction.payment_currency_code
+      AS payment_currency,\n\t\t\ttransaction.payment_currency_exchange_rate,\n\t\t\ttransaction.nav
+      ->> 'value' AS price,\n\t\t\t(transaction.nav ->> 'valuedAt')::date AS price_date,\n\t\t\tCASE\n\t\t\t\tWHEN
+      transaction.type IN ('contribution', 'transfer') THEN transaction.amount / (transaction.nav
+      ->> 'value')::numeric\n\t\t\t\tWHEN transaction.distribution_units IS NOT NULL
+      THEN transaction.distribution_units\n\t\t\t\tELSE 0\n\t\t\tEND AS units,\n\t\t\ttransaction.amount,\n\t\t\tCASE\n\t\t\t\tWHEN
+      transaction.type = 'contribution'\n\t\t\t\tAND transaction.completed_at IS NOT
+      NULL\n\t\t\t\tAND transaction.status NOT IN ('cancelled', 'rejected') THEN (\n\t\t\t\t\tSELECT\n\t\t\t\t\t\tSUM(t2.amount)\n\t\t\t\t\tFROM\n\t\t\t\t\t\ttransaction
+      AS t2\n\t\t\t\t\tWHERE\n\t\t\t\t\t\tt2.investor_id = transaction.investor_id\n\t\t\t\t\t\tAND
+      t2.type = 'contribution'\n\t\t\t\t\t\tAND t2.status NOT IN ('cancelled', 'rejected')\n\t\t\t\t\t\tAND
+      t2.deleted_at IS NULL\n\t\t\t\t\t\tAND t2.completed_at <= transaction.completed_at\n\t\t\t\t\t\tAND
+      t2.completed_at > (transaction.completed_at - INTERVAL '365 days')\n\t\t\t\t)\n\t\t\t\tELSE
+      NULL\n\t\t\tEND AS trailing_365_day_contributions,\n\t\t\ttransaction.distribution_units,\n\t\t\ttransaction.distribution_cash,\n\t\t\ttransaction.payment_registered_account_type
+      AS account_type,\n\t\t\tregistered_account.trust_company AS account_company,\n\t\t\tregistered_account.account_number
+      AS account_number,\n\t\t\tfrom_registered_account.type AS from_account_type,\n\t\t\tfrom_registered_account.trust_company
+      AS from_account_company,\n\t\t\tfrom_registered_account.account_number AS from_account_number,\n\t\t\tissuer_profile.name
+      AS issuer_name,\n\t\t\tissuer_primary.first_name AS issuer_primary_user_first_name,\n\t\t\tissuer_primary.last_name
+      AS issuer_primary_user_last_name,\n\t\t\tissuer_primary.email AS issuer_primary_user_email,\n\t\t\tissuer_primary.phone
+      AS issuer_primary_user_phone,\n\t\t\tinvestor.id AS investor_id,\n\t\t\tinvestor.type
+      AS investor_type,\n\t\t\tinvestor_entity.name AS investor_entity_name,\n\t\t\tinvestor_entity.accreditation_status
+      AS investor_entity_accreditation_status,\n\t\t\tinvestor_entity.accreditation_criteria
+      AS investor_entity_accreditation_qualification,\n\t\t\tinvestor_entity.business_identification_number
+      AS investor_entity_business_identification_number,\n\t\t\tinvestor_entity.company_address
+      ->> 'unit' AS investor_entity_address_unit,\n\t\t\tinvestor_entity.company_address
+      ->> 'street' AS investor_entity_address_street,\n\t\t\tinvestor_entity.company_address
+      ->> 'province' AS investor_entity_address_province,\n\t\t\tinvestor_entity.company_address
+      ->> 'postalCode' AS investor_entity_address_postal_code,\n\t\t\tinvestor_entity.company_address
+      ->> 'country' AS investor_entity_address_country,\n\t\t\tinvestor_entity.company_address
+      ->> 'city' AS investor_entity_address_city,\n\t\t\tinvestor_pu.first_name AS
+      investor_primary_user_first_name,\n\t\t\tinvestor_pu.last_name AS investor_primary_user_last_name,\n\t\t\tinvestor_pu.email
+      AS investor_primary_user_email,\n\t\t\tinvestor_pu.phone AS investor_primary_user_phone,\n\t\t\tinvestor_pu.date_of_birth
+      AS investor_primary_user_date_of_birth,\n\t\t\tinvestor_pu.accreditation_status
+      AS investor_primary_user_accreditation_status,\n\t\t\tinvestor_pu.accreditation_criteria
+      AS investor_primary_user_accreditation_qualification,\n\t\t\tinvestor_pu.sin
+      AS investor_primary_user_sin,\n\t\t\tinvestor_pu.employment_status AS investor_primary_user_employment_status,\n\t\t\tinvestor_pu.employment_occupation
+      AS investor_primary_user_employment_occupation,\n\t\t\tinvestor_pu.accepted_rdi
+      AS investor_primary_user_accepted_rdi,\n\t\t\tkyc_pu.provider AS investor_primary_user_kyc_provider,\n\t\t\tnote_pu.content
+      AS investor_primary_user_kyc_note,\n\t\t\tkyc_pu.status AS investor_primary_user_kyc_provider_status,\n\t\t\tkyc_pu.veriff_report
+      -> 'verification' ->> 'status' AS investor_primary_user_veriff_status,\n\t\t\tkyc_pu.status
+      AS investor_primary_user_kyc_questions_review_status,\n\t\t\tkyc_pu.kyc_hits_review_status
+      AS investor_primary_user_kyc_hits_review_status,\n\t\t\tkyc_pu.document_type
+      AS investor_primary_user_document_type,\n\t\t\tkyc_pu.document_number AS investor_primary_user_document_number,\n\t\t\tkyc_pu.document_valid_from
+      AS investor_primary_user_document_valid_from,\n\t\t\tkyc_pu.document_valid_to
+      AS investor_primary_user_document_valid_to,\n\t\t\tkyc_pu.document_country AS
+      investor_primary_user_document_country,\n\t\t\tEXISTS (\n\t\t\t\tSELECT\n\t\t\t\t\t1\n\t\t\t\tFROM\n\t\t\t\t\tjsonb_array_elements(kyc_pu.veriff_report
+      -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\tWHERE\n\t\t\t\t\thits -> 'listingsRelatedToMatch'
+      -> 'pep' -> 0 IS NOT NULL\n\t\t\t)\n\t\t\tOR (kyc_pu.onfido_report -> 'reports'
+      -> 1 -> 'breakdown' -> 'politically_exposed_person' ->> 'result' != 'clear')
+      AS investor_primary_user_kyc_pep_hit,\n\t\t\tEXISTS (\n\t\t\t\tSELECT\n\t\t\t\t\t1\n\t\t\t\tFROM\n\t\t\t\t\tjsonb_array_elements(kyc_pu.veriff_report
+      -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\tWHERE\n\t\t\t\t\thits -> 'listingsRelatedToMatch'
+      -> 'sanctions' -> 0 IS NOT NULL\n\t\t\t)\n\t\t\tOR (kyc_pu.onfido_report ->
+      'reports' -> 1 -> 'breakdown' -> 'sanction' ->> 'result' != 'clear') AS investor_primary_user_kyc_sanctions_hit,\n\t\t\tEXISTS
+      (\n\t\t\t\tSELECT\n\t\t\t\t\t1\n\t\t\t\tFROM\n\t\t\t\t\tjsonb_array_elements(kyc_pu.veriff_report
+      -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\tWHERE\n\t\t\t\t\thits -> 'listingsRelatedToMatch'
+      -> 'warnings' -> 0 IS NOT NULL\n\t\t\t)\n\t\t\tOR (kyc_pu.onfido_report -> 'reports'
+      -> 1 -> 'breakdown' -> 'legal_and_regulatory_warnings' ->> 'result' != 'clear')
+      AS investor_primary_user_kyc_warnings_hit,\n\t\t\tEXISTS (\n\t\t\t\tSELECT\n\t\t\t\t\t1\n\t\t\t\tFROM\n\t\t\t\t\tjsonb_array_elements(kyc_pu.veriff_report
+      -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\tWHERE\n\t\t\t\t\thits -> 'listingsRelatedToMatch'
+      -> 'fitnessProbity' -> 0 IS NOT NULL\n\t\t\t) AS investor_primary_user_kyc_fitness_probity_hit,\n\t\t\tinvestor_pu.residential_address
+      ->> 'unit' AS investor_primary_residential_address_unit,\n\t\t\tinvestor_pu.residential_address
+      ->> 'street' AS investor_primary_residential_address_street,\n\t\t\tinvestor_pu.residential_address
+      ->> 'province' AS investor_primary_residential_address_province,\n\t\t\tinvestor_pu.residential_address
+      ->> 'postalCode' AS investor_primary_residential_address_postal_code,\n\t\t\tinvestor_pu.residential_address
+      ->> 'country' AS investor_primary_residential_address_country,\n\t\t\tinvestor_pu.residential_address
+      ->> 'city' AS investor_primary_residential_address_city,\n\t\t\tinvestor_ju.first_name
+      AS investor_joint_user_first_name,\n\t\t\tinvestor_ju.last_name AS investor_joint_user_last_name,\n\t\t\tinvestor_ju.email
+      AS investor_joint_user_email,\n\t\t\tinvestor_ju.phone AS investor_joint_user_phone,\n\t\t\tinvestor_ju.date_of_birth
+      AS investor_joint_user_date_of_birth,\n\t\t\tinvestor_ju.accreditation_status
+      AS investor_joint_user_accreditation_status,\n\t\t\tinvestor_ju.accreditation_criteria
+      AS investor_joint_user_accreditation_qualification,\n\t\t\tinvestor_ju.sin AS
+      investor_joint_user_sin,\n\t\t\tinvestor_ju.employment_status AS investor_joint_user_employment_status,\n\t\t\tinvestor_ju.employment_occupation
+      AS investor_joint_userr_employment_occupation,\n\t\t\tinvestor_ju.accepted_rdi
+      AS investor_joint_user_accepted_rdi,\n\t\t\tkyc_ju.provider AS investor_joint_user_kyc_provider,\n\t\t\tnote_ju.content
+      AS investor_joint_user_kyc_note,\n\t\t\tkyc_ju.status AS investor_joint_user_kyc_provider_status,\n\t\t\tkyc_ju.veriff_report
+      -> 'verification' ->> 'status' AS investor_joint_user_veriff_status,\n\t\t\tkyc_ju.status
+      AS investor_joint_user_kyc_questions_review_status,\n\t\t\tkyc_ju.kyc_hits_review_status
+      AS investor_joint_user_kyc_hits_review_status,\n\t\t\tkyc_ju.document_type AS
+      investor_joint_user_document_type,\n\t\t\tkyc_ju.document_number AS investor_joint_user_document_number,\n\t\t\tkyc_ju.document_valid_from
+      AS investor_joint_user_document_valid_from,\n\t\t\tkyc_ju.document_valid_to
+      AS investor_joint_user_document_valid_to,\n\t\t\tkyc_ju.document_country AS
+      investor_joint_user_document_country,\n\t\t\tEXISTS (\n\t\t\t\tSELECT\n\t\t\t\t\t1\n\t\t\t\tFROM\n\t\t\t\t\tjsonb_array_elements(kyc_ju.veriff_report
+      -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\tWHERE\n\t\t\t\t\thits -> 'listingsRelatedToMatch'
+      -> 'pep' -> 0 IS NOT NULL\n\t\t\t)\n\t\t\tOR (kyc_ju.onfido_report -> 'reports'
+      -> 1 -> 'breakdown' -> 'politically_exposed_person' ->> 'result' != 'clear')
+      AS investor_joint_user_kyc_pep_hit,\n\t\t\tEXISTS (\n\t\t\t\tSELECT\n\t\t\t\t\t1\n\t\t\t\tFROM\n\t\t\t\t\tjsonb_array_elements(kyc_ju.veriff_report
+      -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\tWHERE\n\t\t\t\t\thits -> 'listingsRelatedToMatch'
+      -> 'sanctions' -> 0 IS NOT NULL\n\t\t\t)\n\t\t\tOR (kyc_ju.onfido_report ->
+      'reports' -> 1 -> 'breakdown' -> 'sanction' ->> 'result' != 'clear') AS investor_joint_user_kyc_sanctions_hit,\n\t\t\tEXISTS
+      (\n\t\t\t\tSELECT\n\t\t\t\t\t1\n\t\t\t\tFROM\n\t\t\t\t\tjsonb_array_elements(kyc_ju.veriff_report
+      -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\tWHERE\n\t\t\t\t\thits -> 'listingsRelatedToMatch'
+      -> 'warnings' -> 0 IS NOT NULL\n\t\t\t)\n\t\t\tOR (kyc_ju.onfido_report -> 'reports'
+      -> 1 -> 'breakdown' -> 'legal_and_regulatory_warnings' ->> 'result' != 'clear')
+      AS investor_joint_user_kyc_warnings_hit,\n\t\t\tEXISTS (\n\t\t\t\tSELECT\n\t\t\t\t\t1\n\t\t\t\tFROM\n\t\t\t\t\tjsonb_array_elements(kyc_ju.veriff_report
+      -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\tWHERE\n\t\t\t\t\thits -> 'listingsRelatedToMatch'
+      -> 'fitnessProbity' -> 0 IS NOT NULL\n\t\t\t) AS investor_joint_user_kyc_fitness_probity_hit,\n\t\t\tbank_account.account_name
+      AS bank_account_name,\n\t\t\tbank_account.account_number AS bank_account_number,\n\t\t\tbank_account.transit_number
+      AS bank_account_transit_number,\n\t\t\tbank_account.institution_number AS bank_account_institution_number,\n\t\t\tbank_account.institution_name
+      AS bank_account_institution_name,\n\t\t\t(investor.suitability ->> 'trustee_contact_person')::boolean
+      AS trustee_contact_person,\n\t\t\tinvestor.suitability ->> 'trustee_contact_person_name'
+      AS trustee_contact_person_name,\n\t\t\tinvestor.suitability ->> 'trustee_contact_person_phone'
+      AS trustee_contact_person_phone,\n\t\t\treferrer.type AS referrer_type,\n\t\t\treferrer_entity_profile.name
+      AS referrer_entity_name,\n\t\t\treferrer_user_profile.first_name AS referrer_first_name,\n\t\t\treferrer_user_profile.last_name
+      AS referrer_last_name,\n\t\t\treferrer_user_profile.email AS referrer_email,\n\t\t\treferrer_user_profile.phone
+      AS referrer_phone,\n\t\t\trd.acknowledged_at IS NOT NULL AS referral_document_acknowleded,\n\t\t\trd.acknowledged_at
+      AS referral_document_acknowleded_at,\n\t\t\trd.sent_at AS referral_document_sent_at,\n\t\t\tdealing_rep_profile.first_name
+      AS dealing_rep_first_name,\n\t\t\tdealing_rep_profile.last_name AS dealing_rep_last_name,\n\t\t\tdealing_rep_profile.email
+      AS dealing_rep_email,\n\t\t\tdealing_rep_profile.phone AS dealing_rep_phone,\n\t\t\ttransaction.suitability_notes
+      ->> 'cco_note' AS cco_note,\n\t\t\ttransaction.suitability_notes ->> 'dealing_rep_note'
+      AS dealing_rep_note,\n\t\t\ttransaction.suitability_notes ->> 'approved' AS
+      suitability_approved\n\t\tFROM\n\t\t\t\"transaction\"\n\t\t\tLEFT JOIN registered_account
+      ON registered_account.id = transaction.payment_registered_account_id\n\t\t\tLEFT
+      JOIN registered_account from_registered_account ON from_registered_account.id
+      = transaction.transferred_from_registered_account_id\n\t\t\tLEFT JOIN offer
+      ON offer.symbol = transaction.offer_symbol\n\t\t\tLEFT JOIN account investor
+      ON investor.id = transaction.investor_id\n\t\t\tLEFT JOIN entity_profile investor_entity
+      ON investor_entity.id = investor.entity_id\n\t\t\tLEFT JOIN bank_account ON
+      bank_account.account_id = investor.id\n\t\t\tAND bank_account.receives_cash_distributions\n\t\t\tLEFT
+      JOIN user_profile investor_pu ON investor_pu.id = investor.primary_user_id\n\t\t\tLEFT
+      JOIN kyc kyc_pu ON kyc_pu.user_id = investor.primary_user_id\n\t\t\tLEFT JOIN
+      note note_pu ON note_pu.id = kyc_pu.note_id\n\t\t\tAND note_pu.type = 'kyc'\n\t\t\tLEFT
+      JOIN user_profile investor_ju ON investor_ju.id = investor.secondary_user_id\n\t\t\tLEFT
+      JOIN kyc kyc_ju ON kyc_ju.user_id = investor.secondary_user_id\n\t\t\tLEFT JOIN
+      note note_ju ON note_ju.user_id = kyc_ju.note_id\n\t\t\tAND note_ju.type = 'kyc'\n\t\t\tLEFT
+      JOIN account issuer ON issuer.id = transaction.issuer_id\n\t\t\tLEFT JOIN entity_profile
+      issuer_profile ON issuer_profile.id = issuer.entity_id\n\t\t\tLEFT JOIN user_profile
+      issuer_primary ON issuer_primary.id = issuer.primary_user_id\n\t\t\tLEFT JOIN
+      account referrer ON referrer.id = investor.referrer_account_id\n\t\t\tLEFT JOIN
+      account_user referrer_user ON referrer_user.id = investor.referrer_account_user_id\n\t\t\tLEFT
+      JOIN entity_profile referrer_entity_profile ON referrer_entity_profile.id =
+      referrer.entity_id\n\t\t\tLEFT JOIN user_profile referrer_user_profile ON referrer_user_profile.id
+      = referrer_user.user_id\n\t\t\tLEFT JOIN account_user dealing_rep ON dealing_rep.id
+      = transaction.dealing_rep_id\n\t\t\tLEFT JOIN user_profile dealing_rep_profile
+      ON dealing_rep_profile.id = dealing_rep.user_id\n\t\t\tLEFT JOIN document rd
+      ON rd.id = investor.referral_notice_document_id\n\t\tWHERE\n\t\t\ttransaction.status
+      NOT IN ('cancelled', 'rejected')\n\t) x;"
+    preferences:
+      display_as: table
+      kanban_column: status
+      kanban_columns:
+      - pending
+      - approved
+      - payment_made
+      - payment_received
+      - closed
+      - complete
+      - rejected
+      - cancelled
+      kanban_card_columns:
+      - status
+      - id
+      - type
+      - offer_name
+      - offer_symbol
+      - amount
+      - investor_entity_name
+      - investor_primary_user_first_name
+      - investor_primary_user_last_name
+      - investor_primary_user_email
+    display_column: offer_name
+    searchable_columns:
+    - id
+    - offer_name
+    - offer_symbol
+    - issuer_name
+    - investor_entity_name
+    - investor_primary_user_first_name
+    - investor_primary_user_last_name
+    - investor_primary_user_email
+    - investor_primary_user_phone
+    - investor_joint_user_first_name
+    - investor_joint_user_last_name
+    - investor_joint_user_email
+    - investor_joint_user_phone
+    tabs:
+    - visible: false
+      name: audits
+    - visible: false
+      name: notes
+    columns:
+    - column_type: reference
+      reference:
+        name: investor
+        display_name: Investor
+        model_name: account
+        reference_type: belongs_to
+        foreign_key: investor_id
+        primary_key: id
+        options: {}
+        polymorphic: false
+        virtual: true
+      name: investor_id
+    - name: investor_primary_address_residential_address_street
+      display_name: Investor primary residential address street
+      column_type: string
+      access_type: read_only
+      virtual: false
+      format: {}
+      validators: []
+      description: ''
+    - name: investor_primary_address_residential_address_postal_code
+      display_name: Investor primary residential address postal code
+      column_type: string
+      access_type: read_only
+      virtual: false
+      format: {}
+      validators: []
+      description: ''
+    - name: investor_joint_userr_employment_occupation
+      display_name: Investor joint user employment occupation
+      column_type: string
+      access_type: read_only
+      virtual: false
+      format: {}
+      validators: []
+      description: ''
+    associations:
+    - name: account
+      display_name: Account
+      model_name: account
+      foreign_key: id
+      primary_key: investor_id
+      virtual: true
+      polymorphic: false
+      slug: account
+    scopes:
+    - name: contributions
+      display_name: Contributions
+      scope_type: filter
+      preferences:
+        filter:
+        - type:
+            eq: contribution
+    - name: distributions
+      display_name: Distributions
+      scope_type: filter
+      preferences:
+        filter:
+        - type:
+            eq: distribution
+    - name: redemptions
+      display_name: Redemptions
+      scope_type: filter
+      preferences:
+        filter:
+        - type:
+            eq: redemption
+    - name: loan_repayments
+      display_name: Loan Repayments
+      scope_type: filter
+      preferences:
+        filter:
+        - type:
+            eq: loan_repayment
+    - name: transfers
+      display_name: Transfers
+      scope_type: filter
+      preferences:
+        filter:
+        - type:
+            eq: transfer
+    - name: kyc_hit
+      display_name: KYC Hit
+      scope_type: filter
+      preferences:
+        filter:
+        - investor_primary_user_kyc_pep_hit:
+            eq: true
+        - OR
+        - investor_primary_user_kyc_sanctions_hit:
+            eq: true
+        - OR
+        - investor_primary_user_kyc_warnings_hit:
+            eq: true
+        - OR
+        - investor_primary_user_kyc_fitness_probity_hit:
+            eq: true
+        - OR
+        - investor_joint_user_kyc_pep_hit:
+            eq: true
+        - OR
+        - investor_joint_user_kyc_sanctions_hit:
+            eq: true
+        - OR
+        - investor_joint_user_kyc_warnings_hit:
+            eq: true
+        - OR
+        - investor_joint_user_kyc_fitness_probity_hit:
+            eq: true
+    - name: ff&ba
+      display_name: FF&BA
+      scope_type: filter
+      preferences:
+        filter:
+        - used_ffba:
+            eq: true
+        - type:
+            eq: contribution
+        - status:
+            neq: cancelled
+        - status:
+            neq: rejected
+    - name: manual_kyc
+      display_name: Manual KYC
+      scope_type: filter
+      preferences:
+        filter:
+        - investor_primary_user_kyc_provider:
+            eq: manual
+        - type:
+            eq: contribution
+    - name: prefers_cash
+      display_name: Prefers Cash
+      scope_type: filter
+      preferences:
+        filter:
+        - prefers_drip:
+            neq: true
+        - type:
+            eq: contribution
+        - offer_has_distributions:
+            eq: drip_or_cash
+    - name: veriff_kyc
+      display_name: Veriff KYC
+      scope_type: filter
+      preferences:
+        filter:
+        - investor_primary_user_kyc_provider:
+            eq: veriff
+        - type:
+            eq: contribution
+    - name: onfido_kyc
+      display_name: Onfido KYC
+      scope_type: filter
+      preferences:
+        filter:
+        - investor_primary_user_kyc_provider:
+            eq: onfido
+        - type:
+            eq: contribution
+  updated_at: 2025-11-25 15:16:20.409735000 +00:00
+- name: typeorm_metadatum
+  preferences:
+    visible: false
+  updated_at: 2025-01-21 20:28:00.717140000 +00:00
+- name: user
+  preferences:
+    columns:
+    - column_type: tag
+      default_value: ''
+      name: groups
+    - name: customer
+      display_name: Customer
+      column_type: reference
+      access_type: read_only
+      default_value: ''
+      reference:
+        name: customer
+        display_name: Customer
+        model_name: customer
+        reference_type: has_one
+        foreign_key: email
+        association_primary_key: email
+        options: {}
+        polymorphic: false
+        virtual: true
+        primary_key: email
+      virtual: true
+      format: {}
+  updated_at: 2021-12-04 10:25:38.029892000 +00:00
+- name: vesting_schedule
+  preferences:
+    visible: false
+  updated_at: 2024-02-27 22:44:46.483422000 +00:00
+- name: video
+  preferences:
+    display_name: Offer Videos
+  updated_at: 2024-03-20 18:50:49.325424000 +00:00
+- name: wallet
+  preferences:
+    display_name: Wallet Addresses
+    visible: false
+  updated_at: 2024-02-27 23:10:01.934812000 +00:00
+configs:
+- key: header.links
+  value:
+  - name: Reports
+    link_type: reports
+  - name: Forms
+    link_type: forms
+  - conditions: []
+    type: header
+    name: Investments
+    path: "/queries/13"
+    link_type: header
+  - conditions: []
+    type: header
+    name: UnReviewed Veriff KYC Hits
+    path: "/queries/14"
+    link_type: header
+  - conditions: []
+    type: header
+    name: KYC'd 3 Years Ago
+    path: "/queries/15"
+    link_type: header
+  - conditions: []
+    type: header
+    name: Offer Dealing Reps
+    path: "/queries/17"
+    link_type: header
+  updated_at: 2025-09-17 20:42:21.848728000 +00:00
+- key: homepage.layout
+  value:
+  - type: dashboard
+    id: 2
+  updated_at: 2025-04-02 09:32:49.556751000 +00:00
+- key: resources.account.columns.order
+  value:
+  - id
+  - account_number
+  - is_investor
+  - contributions
+  - referred
+  - account_type
+  - entity_name
+  - entity_company_address
+  - is_referral_agent
+  - referral_agent_effective_date
+  - status
+  - primary_user_first_name
+  - primary_user_last_name
+  - primary_user_date_of_birth
+  - primary_user_email
+  - primary_user_phone
+  - primary_user_sin
+  - primary_user_residential_address
+  - kycd_not_invested
+  - pending_kyc_not_invested
+  - primary_user_kyc_provider
+  - primary_user_kyc_note
+  - primary_user_kyc_provider_status
+  - primary_user_kyc_questions_review_status
+  - primary_user_kyc_hits_review_status
+  - primary_user_document_type
+  - primary_user_document_number
+  - primary_user_document_valid_from
+  - primary_user_document_valid_to
+  - primary_user_document_country
+  - primary_user_kyc_pep_hit
+  - primary_user_kyc_sanctions_hit
+  - primary_user_kyc_warnings_hit
+  - primary_user_kyc_fitness_probity_hit
+  - joint_user_first_name
+  - joint_user_last_name
+  - joint_user_date_of_birth
+  - joint_user_email
+  - joint_user_phone
+  - joint_user_kyc_provider
+  - joint_user_kyc_note
+  - joint_user_kyc_provider_status
+  - joint_user_kyc_questions_review_status
+  - joint_user_kyc_hits_review_status
+  - joint_user_document_type
+  - joint_user_document_number
+  - joint_user_document_valid_from
+  - joint_user_document_valid_to
+  - joint_user_document_country
+  - joint_user_kyc_pep_hit
+  - joint_user_kyc_sanctions_hit
+  - joint_user_kyc_warnings_hit
+  - joint_user_kyc_fitness_probity_hit
+  - referrer_account_id
+  - referrer_account_user_id
+  - aum
+  - is_broker
+  - risk_level
+  - is_registrant
+  - risk_capacity
+  - risk_tolerance
+  - asset_allocation
+  - investment_horizon
+  - investment_knowledge
+  - previous_investments
+  - investment_experience
+  - investment_objectives
+  - other_previous_investments
+  - ownership_interest_primary
+  - more_than_one_account_operator
+  - more_than_one_account_operator_relationship
+  - more_than_one_account_operator_phone
+  - more_than_one_account_operator_name
+  - trustee_contact_person
+  - trustee_contact_person_name
+  - trustee_contact_person_phone
+  - confirm_investment_single_offering
+  - more_than_25_percent_or_politically_exposed
+  - employment_status
+  - politically_exposed
+  - net_financial_assets
+  - using_borrowed_money
+  - pre_tax_annual_income
+  - account_opened_on_behalf
+  - insider_reporting_issuer
+  - updated_at
+  updated_at: 2025-05-28 16:27:22.404172000 +00:00
+- key: resources.account.scopes.order
+  value:
+  - invested
+  - kycd_not_invested_
+  - pending_kyc_not_invested
+  - issuers
+  - referral_agents
+  updated_at: 2024-08-22 19:26:52.860596000 +00:00
+- key: resources.account_user.columns.order
+  value:
+  - id
+  - referred
+  - account_type
+  - user_type
+  - first_name
+  - last_name
+  - email
+  - account_id
+  - account_number
+  - account_risk_rating
+  - entity_name
+  - is_director
+  - shareholder_percentage_ownership
+  - kyc_provider
+  - kyc_provider_status
+  - kyc_pep_hit
+  - kyc_sanctions_hit
+  - kyc_warnings_hit
+  - kyc_fitness_probity_hit
+  - kyc_hits_review_status
+  - kyc_questions_review_status
+  - kyc_document_type
+  - kyc_document_number
+  - kyc_document_country
+  - kyc_document_issuing_date
+  - kyc_document_expiry_date
+  updated_at: 2024-03-29 14:33:47.314566000 +00:00
+- key: resources.account_user.scopes.order
+  value:
+  - admin
+  - investor
+  - referral_agent
+  updated_at: 2024-03-20 23:33:06.090914000 +00:00
+- key: resources.active_storage/attachment.columns.order
+  value:
+  - id
+  - path
+  - record_id
+  - record_type
+  - name
+  - file
+  - created_at
+  updated_at: 2021-05-20 12:28:27.887703000 +00:00
+- key: resources.bank_account.associations.order
+  value:
+  - account
+  - transactions
+  updated_at: 2024-03-28 14:24:48.481159000 +00:00
+- key: resources.bank_account.columns.order
+  value:
+  - id
+  - account_type
+  - entity_name
+  - first_name
+  - email
+  - phone
+  - account_id
+  - last_name
+  - account_number
+  - transit_number
+  - institution_number
+  - institution_name
+  - receives_cash_distributions
+  - status
+  - rejected_reason
+  - void_cheque_id
+  - migrate_from
+  - migration_data
+  - account_name
+  - account_address
+  - swift_code
+  - institution_address
+  - default_offer_eft_payment
+  - default_offer_wire_payment
+  - joint_user_first_name
+  - joint_user_last_name
+  - joint_user_email
+  - joint_user_phone
+  - updated_at
+  - created_at
+  - deleted_at
+  updated_at: 2024-03-28 14:23:01.059718000 +00:00
+- key: resources.country.columns.order
+  value:
+  - id
+  - name
+  - code
+  - customers_count
+  - updated_at
+  - created_at
+  updated_at: 2021-07-15 09:43:36.040697000 +00:00
+- key: resources.customer.associations.order
+  value:
+  - orders
+  - line_items
+  - notes
+  updated_at: 2021-05-21 17:59:03.557865000 +00:00
+- key: resources.customer.columns.order
+  value:
+  - id
+  - country_code
+  - name
+  - email
+  - lifetime_value
+  - kind
+  - sales_per_year
+  - monthly_sales_diff
+  - reputation
+  - email_subscriber
+  - bio
+  - updated_at
+  - created_at
+  updated_at: 2021-07-15 17:23:43.174013000 +00:00
+- key: resources.customer.scopes.order
+  value:
+  - vip
+  - standard
+  updated_at: 2021-05-20 13:46:36.180216000 +00:00
+- key: resources.customer.tabs.order
+  value:
+  - details
+  - sales
+  updated_at: 2021-05-21 17:58:38.821263000 +00:00
+- key: resources.distribution_checkpoint.columns.order
+  value:
+  - id
+  - investor_id
+  - distribution_id
+  - offer_symbol
+  - issuer_id
+  - dps
+  - cash_amount
+  - securities_amount
+  - registry_date
+  - payout_date
+  - shares
+  - block_number
+  - block_timestamp
+  - resolution_id
+  - transaction_id
+  - nav
+  - migrate_from
+  - migration_data
+  - updated_at
+  - created_at
+  - deleted_at
+  updated_at: 2024-03-15 19:25:17.180663000 +00:00
+- key: resources.kyc.scopes.order
+  value:
+  - veriff
+  - onfido
+  - manual
+  updated_at: 2024-03-29 09:27:58.037455000 +00:00
+- key: resources.note.associations.order
+  value:
+  - user_profile
+  - account
+  - transaction
+  - account_users
+  updated_at: 2024-03-25 18:56:44.405558000 +00:00
+- key: resources.note.scopes.order
+  value:
+  - kyc
+  - suitability
+  - other
+  updated_at: 2024-06-03 18:18:06.068711000 +00:00
+- key: resources.offer_dealing_rep.columns.order
+  value:
+  - id
+  - first_name
+  - last_name
+  - email
+  - global_condition
+  - provice_condition
+  - symbol
+  - name
+  updated_at: 2024-03-28 13:57:29.616497000 +00:00
+- key: resources.offer_referrer.columns.order
+  value:
+  - id
+  - migrate_from
+  - migration_data
+  - offer_symbol
+  - offer_name
+  - referral_agent_id
+  - entity_name
+  - first_name
+  - last_name
+  - commission
+  - updated_at
+  - created_at
+  - deleted_at
+  updated_at: 2024-06-19 18:33:40.421084000 +00:00
+- key: resources.order
+  value:
+  - audit
+  - note
+  - account
+  - account_user
+  - account_wallet
+  - wallet
+  - registered_account
+  - bank_account
+  - entity_profile
+  - user_profile
+  - user_notification
+  - kyc
+  - transaction
+  - distribution_checkpoint
+  - distribution_resolution
+  - distribution
+  - document
+  - migration
+  - offer_engagement
+  - offer
+  - offer_dealing_rep
+  - offer_document
+  - offer_price
+  - offer_group
+  - offer_invite
+  - offer_referrer
+  - offer_update
+  - video
+  - offer_payment_instruction
+  - subscription_template
+  - subscription_template_signer
+  - offer_group_tag
+  - offer_group_tags_offer_group_tag
+  - offer_tag
+  - offer_tags_offer_tag
+  - offer_tags_tag
+  - tag
+  - platform_custody_wallet
+  - vesting_schedule
+  - active_storage/attachment
+  - typeorm_metadatum
+  updated_at: 2025-01-21 20:28:33.663379000 +00:00
+- key: resources.order.actions.order
+  value:
+  - create
+  - edit
+  - remove
+  - mark_as_shipped
+  - cancel
+  updated_at: 2021-05-20 13:33:38.049831000 +00:00
+- key: resources.order.columns.order
+  value:
+  - id
+  - customer_id
+  - total_price
+  - address_line_one
+  - address_line_two
+  - address_city
+  - address_state
+  - address_zip
+  - status
+  - map_link
+  - shipped_at
+  - updated_at
+  - created_at
+  updated_at: 2021-07-03 10:30:22.826480000 +00:00
+- key: resources.order.scopes.order
+  value:
+  - pending
+  - shipped
+  - delivered
+  - canceled
+  updated_at: 2021-05-20 13:46:51.179106000 +00:00
+- key: resources.product.associations.order
+  value:
+  - orders
+  - line_items
+  - customers
+  updated_at: 2021-05-20 12:57:27.650784000 +00:00
+- key: resources.transaction.columns.order
+  value:
+  - id
+  - type
+  - service_type
+  - status
+  - completed_at
+  - distribution_date
+  - maturity_date
+  - updated_at
+  - created_at
+  - offer_type
+  - offer_symbol
+  - transferred_from_offer_symbol
+  - offer_name
+  - offer_currency
+  - used_ffba
+  - offer_has_distributions
+  - prefers_drip
+  - payment_method
+  - payment_currency
+  - payment_currency_exchange_rate
+  - price
+  - price_date
+  - units
+  - amount
+  - trailing_365_day_contributions
+  - distribution_cash
+  - distribution_units
+  - account_type
+  - account_company
+  - account_number
+  - from_account_type
+  - from_account_company
+  - from_account_number
+  - issuer_name
+  - issuer_primary_user_first_name
+  - issuer_primary_user_last_name
+  - issuer_primary_user_email
+  - issuer_primary_user_phone
+  - investor_id
+  - investor_type
+  - investor_entity_name
+  - investor_entity_accreditation_status
+  - investor_entity_accreditation_qualification
+  - investor_entity_business_identification_number
+  - investor_entity_address_unit
+  - investor_entity_address_street
+  - investor_entity_address_city
+  - investor_entity_address_country
+  - investor_entity_address_province
+  - investor_entity_address_postal_code
+  - investor_primary_user_first_name
+  - investor_primary_user_last_name
+  - investor_primary_user_date_of_birth
+  - investor_primary_user_email
+  - investor_primary_user_phone
+  - investor_primary_user_accreditation_status
+  - investor_primary_user_accreditation_qualification
+  - investor_primary_user_sin
+  - investor_primary_user_employment_status
+  - investor_primary_user_employment_occupation
+  - investor_primary_user_accepted_rdi
+  - investor_primary_user_kyc_provider
+  - investor_primary_user_kyc_provider_status
+  - investor_primary_user_kyc_questions_review_status
+  - investor_primary_user_kyc_hits_review_status
+  - investor_primary_user_kyc_note
+  - investor_primary_user_document_type
+  - investor_primary_user_document_number
+  - investor_primary_user_document_country
+  - investor_primary_user_document_valid_from
+  - investor_primary_user_document_valid_to
+  - investor_primary_user_kyc_pep_hit
+  - investor_primary_user_kyc_sanctions_hit
+  - investor_primary_user_kyc_warnings_hit
+  - investor_primary_user_kyc_fitness_probity_hit
+  - investor_primary_residential_address_unit
+  - investor_primary_residential_address_street
+  - investor_primary_residential_address_city
+  - investor_primary_residential_address_country
+  - investor_primary_residential_address_province
+  - investor_primary_residential_address_postal_code
+  - investor_joint_user_first_name
+  - investor_joint_user_last_name
+  - investor_joint_user_date_of_birth
+  - investor_joint_user_email
+  - investor_joint_user_phone
+  - investor_joint_user_accreditation_status
+  - investor_joint_user_accreditation_qualification
+  - investor_joint_user_accepted_rdi
+  - investor_joint_user_sin
+  - investor_joint_userr_employment_occupation
+  - investor_joint_user_employment_status
+  - investor_joint_user_kyc_provider
+  - investor_joint_user_kyc_provider_status
+  - investor_joint_user_kyc_questions_review_status
+  - investor_joint_user_kyc_hits_review_status
+  - investor_joint_user_kyc_note
+  - investor_joint_user_document_type
+  - investor_joint_user_document_number
+  - investor_joint_user_document_country
+  - investor_joint_user_document_valid_from
+  - investor_joint_user_document_valid_to
+  - investor_joint_user_kyc_pep_hit
+  - investor_joint_user_kyc_sanctions_hit
+  - investor_joint_user_kyc_warnings_hit
+  - investor_joint_user_kyc_fitness_probity_hit
+  - referrer_type
+  - referrer_entity_name
+  - referrer_first_name
+  - referrer_last_name
+  - referrer_email
+  - referrer_phone
+  - referral_document_acknowleded
+  - referral_document_acknowleded_at
+  - referral_document_sent_at
+  - dealing_rep_first_name
+  - dealing_rep_last_name
+  - dealing_rep_email
+  - dealing_rep_phone
+  - cco_note
+  - dealing_rep_note
+  - suitability_approved
+  - bank_account_institution_name
+  - bank_account_institution_number
+  - bank_account_name
+  - bank_account_number
+  - bank_account_transit_number
+  - investor_primary_user_veriff_status
+  - investor_joint_user_veriff_status
+  - trustee_contact_person_phone
+  - trustee_contact_person
+  - trustee_contact_person_name
+  - ffba_family_relationship
+  - ffba_relationship
+  - ffba_position
+  - ffba_phone
+  - ffba_association
+  - ffba_duration
+  - ffba_name
+  - ffba_email
+  - suitability_cco_note_created_at
+  - suitability_dealing_rep_note
+  - suitability_approved_at
+  - suitability_dealing_rep_note_created_at
+  - suitability_cco_note
+  updated_at: 2025-11-25 15:17:40.509664000 +00:00
+- key: resources.transaction.scopes.order
+  value:
+  - transfers
+  - contributions
+  - distributions
+  - redemptions
+  - loan_repayments
+  - ff&ba
+  - prefers_cash
+  - kyc_hit
+  - manual_kyc
+  - veriff_kyc
+  updated_at: 2024-03-29 09:06:56.990173000 +00:00
+- key: ui.custom_html
+  value: |-
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-KNKR8T73');</script>
+    <!-- End Google Tag Manager -->
+
+    <!-- Hotjar Tracking Code for https://motoradmin.atlasone.ca/ -->
+    <script>
+        (function(h,o,t,j,a,r){
+            h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+            h._hjSettings={hjid:6460674,hjsv:6};
+            a=o.getElementsByTagName('head')[0];
+            r=o.createElement('script');r.async=1;
+            r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+            a.appendChild(r);
+        })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+    </script>
+
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KNKR8T73"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+  updated_at: 2025-07-10 16:28:52.580178000 +00:00
+queries:
+- id: 2
+  name: Account Types
+  sql_body: select account.type as account_type, count(*) from account group by account.type
+    order by count(*)
+  description: ''
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options:
+      label_format: decimal
+      label_format_options:
+        currency: USD
+    variables: []
+  tags: []
+  updated_at: 2024-02-28 01:08:06.810597000 +00:00
+- id: 3
+  name: Monthly Accounts Growth
+  sql_body: "WITH monthly_creations AS (\n  SELECT\n    date_trunc('month', created_at)
+    AS month_start,\n    COUNT(*) AS accounts_created\n  FROM account \n  WHERE 1=1
+    {{#account_type}}AND account.type = {{account_type}}{{/account_type}}\n  GROUP
+    BY month_start\n  ORDER BY month_start\n),\ncumulative_data AS (\n  SELECT\n    month_start,\n
+    \   SUM(accounts_created) OVER (ORDER BY month_start) AS cumulative_accounts\n
+    \ FROM monthly_creations\n)\nSELECT \n  month_start,\n  cumulative_accounts\nFROM
+    cumulative_data\nWHERE month_start > date_trunc('month', CURRENT_DATE - interval
+    '24 months')\n  AND month_start <= CURRENT_DATE;"
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: bar_chart
+    visualization_options:
+      label_format: decimal
+      label_format_options:
+        currency: USD
+      chart_values_axis: false
+      chart_stacked: false
+    variables:
+    - name: account_type
+      display_name: Account Type
+      variable_type: select
+      default_value: ''
+      reference_resource: account
+      select_options:
+      - individual_investor
+      - entity_investor
+      - joint_investor
+      - issuer
+      - individual_referral_agent
+      - entity_referral_agent
+  tags: []
+  updated_at: 2025-03-26 15:54:48.604065000 +00:00
+- id: 6
+  name: Non Registered Accounts WINDRO WINROS Invested Accounts
+  sql_body: "SELECT x.offer_symbol, COUNT(x.offer_symbol) as contributions, bank_account.institution_name
+    as bank_account_institution_name, bank_account.institution_number as bank_account_institution_number,
+    bank_account.account_number as bank_account_number, bank_account.transit_number
+    as bank_account_transit_number, x.* FROM (SELECT\n\taccount.id,\n\tt.offer_symbol,\n\taccount.account_number,\n\taccount.type
+    AS account_type,\n\tentity_profile.name AS entity_name,\n\taccount.is_referral_agent,\n\taccount.referral_agent_effective_date,\n\taccount.status,\n\tpu.first_name
+    AS primary_user_first_name,\n\tpu.last_name AS primary_user_last_name,\n\tpu.email
+    AS primary_user_email,\n\tpu.phone AS primary_user_phone,\n\tkyc_pu.provider AS
+    primary_user_kyc_provider,\n\tnote_pu.content AS primary_user_kyc_note,\n\tkyc_pu.status
+    AS primary_user_kyc_provider_status,\n\tkyc_pu.status AS primary_user_kyc_questions_review_status,\n\tkyc_pu.kyc_hits_review_status
+    AS primary_user_kyc_hits_review_status,\n\tkyc_pu.document_type AS primary_user_document_type,\n\tkyc_pu.document_number
+    AS primary_user_document_number,\n\tkyc_pu.document_valid_from AS primary_user_document_valid_from,\n\tkyc_pu.document_valid_to
+    AS primary_user_document_valid_to,\n\tkyc_pu.document_country AS primary_user_document_country,\n\tEXISTS
+    (\n\t\tSELECT\n\t\t\t1\n\t\tFROM\n\t\t\tjsonb_array_elements(kyc_pu.veriff_report
+    -> 'pepAndSanctions' -> 'hits') AS hits\n\t\tWHERE\n\t\t\thits -> 'listingsRelatedToMatch'
+    -> 'pep' -> 0 IS NOT NULL)\n\t\tOR(kyc_pu.onfido_report -> 'reports' -> 1 -> 'breakdown'
+    -> 'politically_exposed_person' ->> 'result' != 'clear') AS primary_user_kyc_pep_hit,
+    EXISTS (\n\t\t\tSELECT\n\t\t\t\t1\n\t\t\tFROM\n\t\t\t\tjsonb_array_elements(kyc_pu.veriff_report
+    -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\tWHERE\n\t\t\t\thits -> 'listingsRelatedToMatch'
+    -> 'sanctions' -> 0 IS NOT NULL)\n\t\t\tOR(kyc_pu.onfido_report -> 'reports' ->
+    1 -> 'breakdown' -> 'sanction' ->> 'result' != 'clear') AS primary_user_kyc_sanctions_hit,
+    EXISTS (\n\t\t\t\tSELECT\n\t\t\t\t\t1\n\t\t\t\tFROM\n\t\t\t\t\tjsonb_array_elements(kyc_pu.veriff_report
+    -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\tWHERE\n\t\t\t\t\thits -> 'listingsRelatedToMatch'
+    -> 'warnings' -> 0 IS NOT NULL)\n\t\t\t\tOR(kyc_pu.onfido_report -> 'reports'
+    -> 1 -> 'breakdown' -> 'legal_and_regulatory_warnings' ->> 'result' != 'clear')
+    AS primary_user_kyc_warnings_hit, EXISTS (\n\t\t\t\t\tSELECT\n\t\t\t\t\t\t1\n\t\t\t\t\tFROM\n\t\t\t\t\t\tjsonb_array_elements(kyc_pu.veriff_report
+    -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\t\tWHERE\n\t\t\t\t\t\thits ->
+    'listingsRelatedToMatch' -> 'fitnessProbity' -> 0 IS NOT NULL) AS primary_user_kyc_fitness_probity_hit,
+    ju.first_name AS joint_user_first_name, ju.last_name AS joint_user_last_name,
+    ju.email AS joint_user_email, ju.phone AS joint_user_phone, kyc_ju.provider AS
+    joint_user_kyc_provider, note_ju.content AS joint_user_kyc_note, kyc_ju.status
+    AS joint_user_kyc_provider_status, kyc_ju.status AS joint_user_kyc_questions_review_status,
+    kyc_ju.kyc_hits_review_status AS joint_user_kyc_hits_review_status, kyc_ju.document_type
+    AS joint_user_document_type, kyc_ju.document_number AS joint_user_document_number,
+    kyc_ju.document_valid_from AS joint_user_document_valid_from, kyc_ju.document_valid_to
+    AS joint_user_document_valid_to, kyc_ju.document_country AS joint_user_document_country,
+    EXISTS (\n\t\t\t\t\t\tSELECT\n\t\t\t\t\t\t\t1\n\t\t\t\t\t\tFROM\n\t\t\t\t\t\t\tjsonb_array_elements(kyc_ju.veriff_report
+    -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\t\t\tWHERE\n\t\t\t\t\t\t\thits
+    -> 'listingsRelatedToMatch' -> 'pep' -> 0 IS NOT NULL)\n\t\t\t\t\t\tOR(kyc_ju.onfido_report
+    -> 'reports' -> 1 -> 'breakdown' -> 'politically_exposed_person' ->> 'result'
+    != 'clear') AS joint_user_kyc_pep_hit, EXISTS (\n\t\t\t\t\t\t\tSELECT\n\t\t\t\t\t\t\t\t1\n\t\t\t\t\t\t\tFROM\n\t\t\t\t\t\t\t\tjsonb_array_elements(kyc_ju.veriff_report
+    -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\t\t\t\tWHERE\n\t\t\t\t\t\t\t\thits
+    -> 'listingsRelatedToMatch' -> 'sanctions' -> 0 IS NOT NULL)\n\t\t\t\t\t\t\tOR(kyc_ju.onfido_report
+    -> 'reports' -> 1 -> 'breakdown' -> 'sanction' ->> 'result' != 'clear') AS joint_user_kyc_sanctions_hit,
+    EXISTS (\n\t\t\t\t\t\t\t\tSELECT\n\t\t\t\t\t\t\t\t\t1\n\t\t\t\t\t\t\t\tFROM\n\t\t\t\t\t\t\t\t\tjsonb_array_elements(kyc_ju.veriff_report
+    -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\t\t\t\t\tWHERE\n\t\t\t\t\t\t\t\t\thits
+    -> 'listingsRelatedToMatch' -> 'warnings' -> 0 IS NOT NULL)\n\t\t\t\t\t\t\t\tOR(kyc_ju.onfido_report
+    -> 'reports' -> 1 -> 'breakdown' -> 'legal_and_regulatory_warnings' ->> 'result'
+    != 'clear') AS joint_user_kyc_warnings_hit, EXISTS (\n\t\t\t\t\t\t\t\t\tSELECT\n\t\t\t\t\t\t\t\t\t\t1\n\t\t\t\t\t\t\t\t\tFROM\n\t\t\t\t\t\t\t\t\t\tjsonb_array_elements(kyc_ju.veriff_report
+    -> 'pepAndSanctions' -> 'hits') AS hits\n\t\t\t\t\t\t\t\t\tWHERE\n\t\t\t\t\t\t\t\t\t\thits
+    -> 'listingsRelatedToMatch' -> 'fitnessProbity' -> 0 IS NOT NULL) AS joint_user_kyc_fitness_probity_hit,
+    account.referrer_account_id, account.referrer_account_user_id, account.suitability
+    ->> 'aum' AS aum, account.suitability ->> 'is_broker' AS is_broker, account.suitability
+    ->> 'risk_level' AS risk_level, account.suitability ->> 'updated_at' AS updated_at,
+    account.suitability ->> 'is_registrant' AS is_registrant, account.suitability
+    ->> 'risk_capacity' AS risk_capacity, account.suitability ->> 'risk_tolerance'
+    AS risk_tolerance, account.suitability -> 'asset_allocation' AS asset_allocation,
+    account.suitability ->> 'investment_horizon' AS investment_horizon, account.suitability
+    ->> 'investment_knowledge' AS investment_knowledge, account.suitability ->> 'previous_investments'
+    AS previous_investments, account.suitability ->> 'investment_experience' AS investment_experience,
+    account.suitability ->> 'investment_objectives' AS investment_objectives, account.suitability
+    -> 'other_previous_investments' AS other_previous_investments, account.suitability
+    ->> 'ownership_interest_primary' AS ownership_interest_primary, account.suitability
+    ->> 'more_than_one_account_operator' AS more_than_one_account_operator, account.suitability
+    ->> 'confirm_investment_single_offering' AS confirm_investment_single_offering,
+    account.suitability ->> 'more_than_25_percent_or_politically_exposed' AS more_than_25_percent_or_politically_exposed,
+    account.suitability ->> 'employment_status' AS employment_status, account.suitability
+    ->> 'politically_exposed' AS politically_exposed, account.suitability ->> 'net_financial_assets'
+    AS net_financial_assets, account.suitability ->> 'using_borrowed_money' AS using_borrowed_money,
+    account.suitability ->> 'pre_tax_annual_income' AS pre_tax_annual_income, account.suitability
+    ->> 'trustee_contact_person' AS trustee_contact_person, account.suitability ->>
+    'account_opened_on_behalf' AS account_opened_on_behalf, account.suitability ->>
+    'insider_reporting_issuer' AS insider_reporting_issuer\n\t\t\t\t\t\t\t\tFROM\n\t\t\t\t\t\t\t\t\taccount\n\t\t\t\t\t\t\t\tINNER
+    JOIN \"transaction\" t ON t.investor_id = account.id\n\t\t\t\t\t\t\t\t\tAND t.type
+    = 'contribution'\n\t\t\t\t\t\t\t\t\tAND t.status NOT IN('cancelled', 'rejected')
+    AND t.payment_method != 'registered_account' AND t.offer_symbol IN ('WINDRO',
+    'WINROS')\n\t\t\t\t\t\t\t\tLEFT JOIN entity_profile ON entity_profile.id = account.entity_id\n\t\t\t\t\t\t\t\tLEFT
+    JOIN user_profile pu ON pu.id = account.primary_user_id\n\t\t\t\t\t\t\t\tLEFT
+    JOIN user_profile ju ON ju.id = account.secondary_user_id\n\t\t\t\t\t\t\t\tLEFT
+    JOIN kyc kyc_pu ON kyc_pu.user_id = account.primary_user_id\n\t\t\t\t\t\t\t\tLEFT
+    JOIN kyc kyc_ju ON kyc_ju.user_id = account.secondary_user_id\n\t\t\t\t\t\t\t\tLEFT
+    JOIN note note_pu ON note_pu.id = kyc_pu.note_id\n\t\t\t\t\t\t\t\tLEFT JOIN note
+    note_ju ON note_ju.id = kyc_ju.note_id\n\t\t\t\t\t\t\t\t) as x\n\t\t\t\t\t\t\t\tleft
+    join bank_account on bank_account.account_id = x.id and (bank_account.receives_cash_distributions
+    is TRUE  or bank_account.id is not NULL)\n\t\t\t\t\t\t\t\tGROUP BY x.id,\n\tx.offer_symbol,\n\tx.account_number,\n\tx.account_type,\n\tx.entity_name,\n\tx.is_referral_agent,\n\tx.referral_agent_effective_date,\n\tx.status,\n\tx.primary_user_first_name,\n\tx.primary_user_last_name,\n\tx.primary_user_email,\n\tx.primary_user_phone,\n\tx.primary_user_kyc_provider,\n\tx.primary_user_kyc_note,\n\tx.primary_user_kyc_provider_status,\n\tx.primary_user_kyc_questions_review_status,\n\tx.primary_user_kyc_hits_review_status,\n\tx.primary_user_document_type,\n\tx.primary_user_document_number,\n\tx.primary_user_document_valid_from,\n\tx.primary_user_document_valid_to,\n\tx.primary_user_document_country,\n\tx.primary_user_kyc_pep_hit,
+    x.primary_user_kyc_sanctions_hit, x.primary_user_kyc_warnings_hit, x.primary_user_kyc_fitness_probity_hit,
+    x.joint_user_first_name, x.joint_user_last_name, x.joint_user_email, x.joint_user_phone,
+    x.joint_user_kyc_provider, x.joint_user_kyc_note, x.joint_user_kyc_provider_status,
+    x.joint_user_kyc_questions_review_status, x.joint_user_kyc_hits_review_status,
+    x.joint_user_document_type, x.joint_user_document_number, x.joint_user_document_valid_from,
+    x.joint_user_document_valid_to, x.joint_user_document_country, x.joint_user_kyc_pep_hit,
+    x.joint_user_kyc_sanctions_hit, x.joint_user_kyc_warnings_hit, x.joint_user_kyc_fitness_probity_hit,
+    x.referrer_account_id, x.referrer_account_user_id, x.aum, x.is_broker, x.risk_level,
+    x.updated_at, x.is_registrant, x.risk_capacity, x.risk_tolerance, x.investment_knowledge,
+    x.previous_investments, x.investment_experience, x.ownership_interest_primary,
+    x.more_than_one_account_operator, x.confirm_investment_single_offering, x.more_than_25_percent_or_politically_exposed,
+    x.employment_status, x.politically_exposed, x.net_financial_assets, x.using_borrowed_money,
+    x.pre_tax_annual_income, x.trustee_contact_person, x.account_opened_on_behalf,
+    x.insider_reporting_issuer,x.asset_allocation, x.investment_horizon, x.investment_objectives,
+    x.other_previous_investments, \n\tbank_account.institution_name, \n\tbank_account.institution_number,\n\tbank_account.account_number,\n\tbank_account.transit_number\n\t\t\t\t\t\t\t\tORDER
+    BY bank_account.institution_name DESC NULLS LAST"
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables: []
+  tags: []
+  updated_at: 2024-04-08 05:49:51.930629000 +00:00
+- id: 7
+  name: Assets Under Management by Offer
+  sql_body: "SELECT \n   offer.\"name\" as \"Offer Name\",\n   CASE \n       WHEN
+    olp.value IS NULL OR olp.value = 0 THEN 'n/a'\n       ELSE TO_CHAR(olp.value,
+    'FM$999,999,999.00')\n   END as \"Latest Price\",\n   TO_CHAR(GREATEST(\n       CASE
+    \n           WHEN olp.value IS NULL OR olp.value = 0 THEN 1\n           ELSE olp.value\n
+    \      END * (\n           COALESCE(NULLIF(sum(CASE \n               WHEN transaction.type
+    = 'contribution' THEN amount / CASE WHEN (nav->>'value')::numeric IS NULL OR (nav->>'value')::numeric
+    = 0 THEN 1 ELSE (nav->>'value')::numeric END\n               WHEN transaction.type
+    = 'redemption' THEN -amount / CASE WHEN (nav->>'value')::numeric IS NULL OR (nav->>'value')::numeric
+    = 0 THEN 1 ELSE (nav->>'value')::numeric END\n               WHEN transaction.distribution_units
+    is not null THEN distribution_units\n               WHEN transaction.type = 'transfer'
+    \n                    AND transaction.transferred_from_offer_symbol IS NOT NULL
+    \n                    AND transaction.transferred_from_offer_symbol != transaction.offer_symbol
+    \n                    AND transaction.offer_symbol = offer.symbol \n                    THEN
+    amount / CASE WHEN (nav->>'value')::numeric IS NULL OR (nav->>'value')::numeric
+    = 0 THEN 1 ELSE (nav->>'value')::numeric END\n               WHEN transaction.type
+    = 'transfer' \n                    AND transaction.transferred_from_offer_symbol
+    = offer.symbol \n                    AND transaction.offer_symbol != offer.symbol
+    \n                    THEN -amount / CASE WHEN transferred_from_offer_at_nav_value
+    IS NULL OR transferred_from_offer_at_nav_value = 0 THEN 1 ELSE transferred_from_offer_at_nav_value
+    END\n               ELSE 0 \n           END), 0), 0)\n       ), 0), \n   'FM$999,999,999,999.00')
+    as \"AUM\",\n   TO_CHAR(sum(CASE WHEN transaction.type = 'contribution' THEN amount
+    ELSE 0 END), 'FM$999,999,999.00') as \"Contribution\",\n   TO_CHAR(sum(CASE WHEN
+    transaction.distribution_units is not null THEN distribution_units * (nav->>'value')::numeric
+    ELSE 0 END), 'FM$999,999,990.00') as \"DRIP\",\n   TO_CHAR(sum(CASE WHEN transaction.distribution_cash
+    is not null THEN distribution_cash ELSE 0 END), 'FM$999,999,990.00') as \"Cash
+    Distribution\",\n   TO_CHAR(sum(CASE WHEN transaction.type = 'redemption' THEN
+    amount ELSE 0 END), 'FM$999,999,990.00') as \"Redemption\",\n   TO_CHAR(COALESCE((SELECT
+    sum(t.amount) \n    FROM transaction t \n    WHERE t.transferred_from_offer_symbol
+    IS NOT NULL \n    AND t.transferred_from_offer_symbol != t.offer_symbol\n    AND
+    t.offer_symbol = offer.symbol\n    AND t.status = 'complete'\n    AND t.type =
+    'transfer'),0), 'FM$999,999,990.00') as \"Transfers In\",\n   TO_CHAR(COALESCE((SELECT
+    sum(t.amount) \n    FROM transaction t \n    WHERE t.transferred_from_offer_symbol
+    = offer.symbol\n    AND t.offer_symbol != offer.symbol \n    AND t.status = 'complete'\n
+    \   AND t.type = 'transfer'), 0), 'FM$999,999,990.00') as \"Transfers Out\",\n
+    \  TO_CHAR(COALESCE(lr.total_principal_paid, 0), 'FM$999,999,990.00') as \"Principal
+    Paid\",\n     TO_CHAR(GREATEST(\n       sum(CASE WHEN transaction.type = 'contribution'
+    AND transaction.offer_type = 'debt' THEN amount ELSE 0 END) - \n           COALESCE(lr.total_principal_paid,
+    0) -\n           GREATEST(\n               ABS(\n                   COALESCE(sum(CASE
+    WHEN transaction.type = 'redemption' THEN amount ELSE 0 END), 0) - \n                   COALESCE((SELECT
+    sum(t.amount) \n                    FROM transaction t \n                    WHERE
+    t.transferred_from_offer_symbol = offer.symbol\n                    AND t.offer_symbol
+    != offer.symbol \n                    AND t.status = 'complete'\n                    AND
+    t.type = 'transfer'), 0)\n                ) - \n               COALESCE(lr.total_interest_paid,
+    0), 0), 0), 'FM$999,999,990.00') as \"Outstanding Principal\",\n   TO_CHAR(COALESCE(lr.total_interest_paid,
+    0), 'FM$999,999,990.00') as \"Interest Paid\"\nFROM \"transaction\" \nJOIN offer
+    ON offer.symbol = transaction.offer_symbol \nLEFT JOIN offer_latest_price olp
+    ON olp.offer_symbol = offer.symbol\nLEFT JOIN (\n    SELECT\n        t.offer_symbol,\n
+    \       SUM(CASE WHEN t.status IN ('complete', 'closed') THEN COALESCE(t.principal_amount,
+    0) ELSE 0 END) as total_principal_paid,\n        SUM(CASE WHEN t.status IN ('complete',
+    'closed') THEN COALESCE(t.interest_amount, 0) ELSE 0 END) as total_interest_paid\n
+    \   FROM transaction t\n    WHERE t.type = 'loan_repayment'\n    GROUP BY t.offer_symbol\n)
+    lr ON lr.offer_symbol = offer.symbol\nWHERE transaction.status IN ('complete',
+    'closed')\nGROUP BY offer.symbol, offer.\"name\", offer.type, olp.value, lr.total_principal_paid,
+    lr.total_interest_paid\nORDER BY sum(CASE WHEN transaction.type = 'contribution'
+    THEN amount ELSE 0 END) DESC;"
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables: []
+  tags: []
+  updated_at: 2025-01-23 22:40:21.276679000 +00:00
+- id: 8
+  name: Assets Under Management
+  sql_body: "SELECT 'Invested Investors' as \"Metric\", TO_CHAR(COUNT(DISTINCT investor_id),
+    'FM999,999,999') as \"Value\" FROM transaction WHERE type = 'contribution' AND
+    status IN ('complete', 'closed')\nUNION ALL\nSELECT \n    'New (Pending) Investors'
+    as \"Metric\",\n    TO_CHAR(COUNT(DISTINCT t1.investor_id), 'FM999,999,999') as
+    \"Value\"\nFROM transaction t1\nWHERE t1.type = 'contribution' \n    AND t1.status
+    NOT IN ('complete', 'closed', 'cancelled', 'rejected')\n    AND NOT EXISTS (\n
+    \       SELECT 1 FROM transaction t2 \n        WHERE t2.investor_id = t1.investor_id\n
+    \       AND t2.type = 'contribution'\n        AND t2.status IN ('complete', 'closed')\n
+    \   )\nUNION ALL\n(\nWITH calculations AS (\nSELECT \n   offer.\"name\" as \"Offer
+    Name\",\n   CASE \n       WHEN olp.value IS NULL OR olp.value = 0 THEN 1\n       ELSE
+    olp.value\n   END as \"Latest Price\",\n   GREATEST(\n       CASE \n           WHEN
+    olp.value IS NULL OR olp.value = 0 THEN 1\n           ELSE olp.value\n       END
+    * (\n           COALESCE(NULLIF(sum(CASE \n               WHEN transaction.type
+    = 'contribution' THEN amount / CASE WHEN (nav->>'value')::numeric IS NULL OR (nav->>'value')::numeric
+    = 0 THEN 1 ELSE (nav->>'value')::numeric END\n               WHEN transaction.type
+    = 'redemption' THEN -amount / CASE WHEN (nav->>'value')::numeric IS NULL OR (nav->>'value')::numeric
+    = 0 THEN 1 ELSE (nav->>'value')::numeric END\n               WHEN transaction.distribution_units
+    is not null THEN distribution_units\n               WHEN transaction.type = 'transfer'
+    \n                    AND transaction.transferred_from_offer_symbol IS NOT NULL
+    \n                    AND transaction.transferred_from_offer_symbol != transaction.offer_symbol
+    \n                    AND transaction.offer_symbol = offer.symbol \n                    THEN
+    amount / CASE WHEN (nav->>'value')::numeric IS NULL OR (nav->>'value')::numeric
+    = 0 THEN 1 ELSE (nav->>'value')::numeric END\n               WHEN transaction.type
+    = 'transfer' \n                    AND transaction.transferred_from_offer_symbol
+    = offer.symbol \n                    AND transaction.offer_symbol != offer.symbol
+    \n                    THEN -amount / CASE WHEN transferred_from_offer_at_nav_value
+    IS NULL OR transferred_from_offer_at_nav_value = 0 THEN 1 ELSE transferred_from_offer_at_nav_value
+    END\n               ELSE 0 \n           END), 0), 0)\n       ), 0) as \"AUM\",\n
+    \  sum(CASE WHEN transaction.type = 'contribution' THEN amount ELSE 0 END) as
+    \"Contribution\",\n   sum(CASE WHEN transaction.distribution_units is not null
+    THEN distribution_units * (nav->>'value')::numeric ELSE 0 END) as \"DRIP\",\n
+    \  sum(CASE WHEN transaction.distribution_cash is not null THEN distribution_cash
+    ELSE 0 END) as \"Cash Distribution\",\n   sum(CASE WHEN transaction.type = 'redemption'
+    THEN amount ELSE 0 END) as \"Redemption\",\n   COALESCE((SELECT sum(t.amount)
+    \n    FROM transaction t \n    WHERE t.transferred_from_offer_symbol IS NOT NULL
+    \n    AND t.transferred_from_offer_symbol != t.offer_symbol\n    AND t.offer_symbol
+    = offer.symbol\n    AND t.status = 'complete'\n    AND t.type = 'transfer'),0)
+    as \"Transfers In\",\n   COALESCE((SELECT sum(t.amount) \n    FROM transaction
+    t \n    WHERE t.transferred_from_offer_symbol = offer.symbol\n    AND t.offer_symbol
+    != offer.symbol \n    AND t.status = 'complete'\n    AND t.type = 'transfer'),
+    0) as \"Transfers Out\",\n   COALESCE(lr.total_principal_paid, 0) as \"Principal
+    Paid\",\n   GREATEST(\n       sum(CASE WHEN transaction.type = 'contribution'
+    AND transaction.offer_type = 'debt' THEN amount ELSE 0 END) - \n           COALESCE(lr.total_principal_paid,
+    0) -\n           GREATEST(\n               ABS(\n                   COALESCE(sum(CASE
+    WHEN transaction.type = 'redemption' THEN amount ELSE 0 END), 0) - \n                   COALESCE((SELECT
+    sum(t.amount) \n                    FROM transaction t \n                    WHERE
+    t.transferred_from_offer_symbol = offer.symbol\n                    AND t.offer_symbol
+    != offer.symbol \n                    AND t.status = 'complete'\n                    AND
+    t.type = 'transfer'), 0)\n                ) - \n               COALESCE(lr.total_interest_paid,
+    0), 0), 0) as \"Outstanding Principal\",\n   COALESCE(lr.total_interest_paid,
+    0) as \"Interest Paid\"\nFROM \"transaction\" \nJOIN offer ON offer.symbol = transaction.offer_symbol
+    \nLEFT JOIN offer_latest_price olp ON olp.offer_symbol = offer.symbol\nLEFT JOIN
+    (\n    SELECT\n        t.offer_symbol,\n        SUM(CASE WHEN t.status IN ('complete',
+    'closed') THEN COALESCE(t.principal_amount, 0) ELSE 0 END) as total_principal_paid,\n
+    \       SUM(CASE WHEN t.status IN ('complete', 'closed') THEN COALESCE(t.interest_amount,
+    0) ELSE 0 END) as total_interest_paid\n    FROM transaction t\n    WHERE t.type
+    = 'loan_repayment'\n    GROUP BY t.offer_symbol\n) lr ON lr.offer_symbol = offer.symbol\nWHERE
+    transaction.status IN ('complete', 'closed')\nGROUP BY offer.symbol, offer.\"name\",
+    offer.type, olp.value, lr.total_principal_paid, lr.total_interest_paid\n)\nSELECT
+    metric as \"Metric\", TO_CHAR(value, 'FM$999,999,999.00') as \"Value\" FROM (\n\n
+    \   SELECT 'AUM' as metric, SUM(\"AUM\") as value FROM calculations\n     UNION
+    ALL\nSELECT 'Pending Contribution' as metric, SUM(amount) as value FROM transaction
+    WHERE type = 'contribution' AND status NOT IN ('complete', 'closed', 'cancelled',
+    'rejected')\nUNION ALL\n    SELECT 'Contribution' as metric, SUM(\"Contribution\")
+    as value FROM calculations UNION ALL\n    SELECT 'Redemption' as metric, SUM(\"Redemption\")
+    as value FROM calculations UNION ALL\n    SELECT 'DRIP' as metric, SUM(\"DRIP\")
+    as value FROM calculations UNION ALL\n    SELECT 'Cash Distribution' as metric,
+    SUM(\"Cash Distribution\") as value FROM calculations UNION ALL\n    SELECT 'Interest
+    Paid' as metric, SUM(\"Interest Paid\") as value FROM calculations UNION ALL\n
+    \   SELECT 'Outstanding Principal' as metric, SUM(\"Outstanding Principal\") as
+    value FROM calculations UNION ALL\n    SELECT 'Transfers' as metric, SUM(\"Transfers
+    Out\") as value FROM calculations\n) x);"
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables: []
+  tags: []
+  updated_at: 2025-01-23 22:41:03.623072000 +00:00
+- id: 9
+  name: Assets Under Management by Registered Account
+  sql_body: "WITH account_types AS (\n    SELECT DISTINCT\n        t.payment_registered_account_id,\n
+    \       t.payment_registered_account_type\n    FROM transaction t\n    WHERE t.payment_registered_account_type
+    IS NOT NULL\n)\nSELECT \n   UPPER(transaction.payment_registered_account_type::text)
+    as \"Account Type\",\n   TO_CHAR(\n       SUM(\n           CASE \n               WHEN
+    olp.value IS NULL OR olp.value = 0 THEN 1\n               ELSE olp.value\n           END
+    * (\n               CASE \n                   WHEN transaction.type = 'contribution'
+    THEN amount / CASE WHEN (nav->>'value')::numeric IS NULL OR (nav->>'value')::numeric
+    = 0 THEN 1 ELSE (nav->>'value')::numeric END\n                   WHEN transaction.type
+    = 'redemption' THEN -amount / CASE WHEN (nav->>'value')::numeric IS NULL OR (nav->>'value')::numeric
+    = 0 THEN 1 ELSE (nav->>'value')::numeric END\n                   WHEN transaction.distribution_units
+    is not null THEN distribution_units\n                   WHEN transaction.type
+    = 'transfer' \n                        AND transaction.transferred_from_registered_account_id
+    IS NOT NULL \n                        AND transaction.payment_registered_account_type
+    = transaction.payment_registered_account_type \n                        THEN amount
+    / CASE WHEN (nav->>'value')::numeric IS NULL OR (nav->>'value')::numeric = 0 THEN
+    1 ELSE (nav->>'value')::numeric END\n                   WHEN transaction.type
+    = 'transfer' \n                        AND transaction.payment_registered_account_id
+    IS NOT NULL\n                        AND transaction.transferred_from_registered_account_id
+    IS NOT NULL\n                        AND transaction.payment_registered_account_type
+    = transaction.payment_registered_account_type \n                        THEN -amount
+    / CASE WHEN transferred_from_offer_at_nav_value IS NULL OR transferred_from_offer_at_nav_value
+    = 0 THEN 1 ELSE transferred_from_offer_at_nav_value END\n                   ELSE
+    0 \n               END\n           )\n       ), \n   'FM$999,999,999,999.00')
+    as \"AUM\",\n   TO_CHAR(sum(CASE WHEN transaction.type = 'contribution' THEN amount
+    ELSE 0 END), 'FM$999,999,999.00') as \"Contribution\",\n   TO_CHAR(sum(CASE WHEN
+    transaction.distribution_units is not null THEN distribution_units * (nav->>'value')::numeric
+    ELSE 0 END), 'FM$999,999,999.00') as \"DRIP\",\n   TO_CHAR(sum(CASE WHEN transaction.distribution_cash
+    is not null THEN distribution_cash END), 'FM$999,999,999.00') as \"Cash Distribution\",\n
+    \  TO_CHAR((SELECT sum(t.amount) \n    FROM transaction t \n    WHERE t.payment_registered_account_type
+    = transaction.payment_registered_account_type \n    AND t.type = 'redemption'),
+    'FM$999,999,999.00') as \"Redemption\",\n   TO_CHAR((SELECT sum(t.amount) \n    FROM
+    transaction t \n    INNER JOIN account_types at ON at.payment_registered_account_id
+    = t.transferred_from_registered_account_id\n    WHERE at.payment_registered_account_type
+    IS NOT NULL \n    AND at.payment_registered_account_type != transaction.payment_registered_account_type\n
+    \   AND t.payment_registered_account_type = transaction.payment_registered_account_type\n
+    \   AND t.status = 'complete'\n    AND t.type = 'transfer'), 'FM$999,999,999.00')
+    as \"Transfers In\",\n   TO_CHAR((SELECT sum(t.amount) \n    FROM transaction
+    t \n    INNER JOIN account_types at ON at.payment_registered_account_id = t.transferred_from_registered_account_id\n
+    \   WHERE at.payment_registered_account_type IS NOT NULL \n    AND at.payment_registered_account_type
+    = transaction.payment_registered_account_type\n    AND t.payment_registered_account_type
+    IS NOT NULL \n    AND t.payment_registered_account_type != transaction.payment_registered_account_type\n
+    \   AND t.status = 'complete'\n    AND t.type = 'transfer'), 'FM$999,999,999.00')
+    as \"Transfers Out\",\n   TO_CHAR(COALESCE(SUM(CASE WHEN lr.total_principal_paid
+    IS NOT NULL THEN lr.total_principal_paid ELSE 0 END), 0), 'FM$999,999,990.00')
+    as \"Principal Paid\",\n   TO_CHAR(GREATEST(\n       SUM(CASE WHEN transaction.offer_type
+    = 'debt' AND transaction.type = 'contribution' THEN amount ELSE 0 END) - \n           COALESCE(SUM(CASE
+    WHEN lr.total_principal_paid IS NOT NULL THEN lr.total_principal_paid ELSE 0 END),
+    0) -\n           GREATEST(\n               ABS(\n                   COALESCE(SUM(CASE
+    WHEN transaction.type = 'redemption' THEN amount ELSE 0 END), 0) +\n                   COALESCE((SELECT
+    sum(t.amount) \n                    FROM transaction t \n                    WHERE
+    t.payment_registered_account_type = transaction.payment_registered_account_type\n
+    \                   AND t.offer_symbol != t.transferred_from_offer_symbol\n                    AND
+    t.status = 'complete'\n                    AND t.type = 'transfer'), 0)\n               )
+    - \n               COALESCE(SUM(CASE WHEN lr.total_interest_paid IS NOT NULL THEN
+    lr.total_interest_paid ELSE 0 END), 0), 0), 0), 'FM$999,999,990.00') as \"Outstanding
+    Principal\",\n   TO_CHAR(COALESCE(SUM(CASE WHEN lr.total_interest_paid IS NOT
+    NULL THEN lr.total_interest_paid ELSE 0 END), 0), 'FM$999,999,990.00') as \"Interest
+    Paid\"\nFROM \"transaction\" \nJOIN offer ON offer.symbol = transaction.offer_symbol
+    \nLEFT JOIN offer_latest_price olp ON olp.offer_symbol = offer.symbol\nLEFT JOIN
+    (\n    SELECT\n        t.offer_symbol,\n        t.payment_registered_account_type,\n
+    \       SUM(CASE WHEN t.status IN ('complete', 'closed') THEN COALESCE(t.principal_amount,
+    0) ELSE 0 END) as total_principal_paid,\n        SUM(CASE WHEN t.status IN ('complete',
+    'closed') THEN COALESCE(t.interest_amount, 0) ELSE 0 END) as total_interest_paid\n
+    \   FROM transaction t\n    WHERE t.type = 'loan_repayment'\n    GROUP BY t.offer_symbol,
+    t.payment_registered_account_type\n) lr ON lr.offer_symbol = offer.symbol AND
+    lr.payment_registered_account_type = transaction.payment_registered_account_type\nWHERE
+    transaction.status NOT IN ('rejected', 'cancelled')\n    AND transaction.payment_registered_account_type
+    IS NOT NULL\nGROUP BY transaction.payment_registered_account_type\nORDER BY SUM(CASE
+    WHEN transaction.type = 'contribution' THEN amount ELSE 0 END) DESC;"
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables: []
+  tags: []
+  updated_at: 2025-01-23 21:29:57.052582000 +00:00
+- id: 10
+  name: Transfers Between Offer by Financial Account
+  sql_body: "SELECT o.name as \"Transferred To\", COALESCE(UPPER(t.payment_registered_account_type::text),
+    'CASH') as \"Transferred To Financial Account\", tfo.name as \"Transferred From\",
+    COALESCE(UPPER(tfr.type::text), 'CASH') as \"Transferred From Financial Account\",
+    TO_CHAR(ROUND(sum(t.amount), 2), 'FM999,999,999,999.00') as \"Amount\" \nFROM
+    transaction t \nLEFT JOIN offer o ON o.symbol = t.offer_symbol\nLEFT JOIN offer
+    tfo ON tfo.symbol = t.transferred_from_offer_symbol\nLEFT JOIN registered_account
+    tfr ON tfr.id = t.transferred_from_registered_account_id\nWHERE t.type = 'transfer'
+    AND t.transferred_from_offer_symbol IS NOT NULL GROUP BY o.name, tfo.name, t.payment_registered_account_type,
+    tfr.type ORDER BY o.name"
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables: []
+  tags: []
+  updated_at: 2025-01-21 16:54:43.262049000 +00:00
+- id: 11
+  name: Transfers Between Financial Accounts by Offer
+  sql_body: "SELECT o.name as \"Transferred To\", COALESCE(UPPER(t.payment_registered_account_type::text),
+    'CASH') as \"Transferred To Financial Account\", COALESCE(UPPER(tfr.type::text),
+    'CASH') as \"Transferred From Financial Account\", TO_CHAR(ROUND(sum(t.amount),
+    2), 'FM999,999,999,999.00') as \"Amount\" \nFROM transaction t \nLEFT JOIN offer
+    o ON o.symbol = t.offer_symbol\nLEFT JOIN registered_account tfr ON tfr.id = t.transferred_from_registered_account_id\nWHERE
+    t.type = 'transfer' AND t.transferred_from_offer_symbol IS NULL AND t.transferred_from_registered_account_id
+    IS NOT NULL GROUP BY o.name, t.payment_registered_account_type, tfr.type ORDER
+    BY o.name"
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables: []
+  tags: []
+  updated_at: 2025-01-21 16:58:18.031319000 +00:00
+- id: 12
+  name: Transfers Between Accounts by Offer and Financial Account
+  sql_body: "SELECT a.account_number as \"Transferred To\", t.offer_symbol as \"Transferred
+    To Offer Symbol\", COALESCE(UPPER(t.payment_registered_account_type::text), 'CASH')
+    as \"Transferred To Financial Account\", tfa.account_number as \"Transferred From\",
+    COALESCE(t.transferred_from_offer_symbol, t.offer_symbol) as \"Transferred From
+    Offer Symbol\", COALESCE(UPPER(tfr.type::text), 'CASH') as \"Transferred From
+    Financial Account\", TO_CHAR(ROUND(sum(t.amount), 2), 'FM999,999,999,999.00')
+    as \"Amount\" \nFROM transaction t \nLEFT JOIN account a ON a.id = t.investor_id\nLEFT
+    JOIN account tfa ON tfa.id = t.transferred_from_investor_id\nLEFT JOIN registered_account
+    tfr ON tfr.id = t.transferred_from_registered_account_id\nWHERE t.type = 'transfer'
+    AND t.transferred_from_investor_id IS NOT NULL GROUP BY t.offer_symbol, t.transferred_from_offer_symbol,
+    a.account_number, tfa.account_number, t.payment_registered_account_type, tfr.type
+    ORDER BY a.account_number"
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables: []
+  tags: []
+  updated_at: 2025-01-21 17:06:37.050453000 +00:00
+- id: 13
+  name: Account Investments
+  sql_body: "WITH transfer_out_amounts AS (\n    SELECT \n        {{#financial_account}}UPPER(payment_registered_account_type::text)
+    as financial_account,{{/financial_account}}\n        CASE \n            WHEN transferred_from_investor_id
+    IS NOT NULL THEN transferred_from_investor_id\n            ELSE investor_id\n
+    \       END as investor_id,\n        CASE \n            WHEN transferred_from_offer_symbol
+    IS NOT NULL THEN transferred_from_offer_symbol\n            ELSE offer_symbol\n
+    \       END as offer_symbol,\n        SUM(amount) as transfer_out_amount,\n        SUM(amount
+    / COALESCE(NULLIF((nav->>'value')::numeric, 0), 1)) as transfer_out_units\n    FROM
+    transaction\n    WHERE type = 'transfer'\n    AND status IN ('complete', 'closed')\n
+    \   AND (transferred_from_investor_id IS NOT NULL OR transferred_from_offer_symbol
+    IS NOT NULL)\n    GROUP BY 1, 2, transferred_from_offer_symbol, offer_symbol  {{#financial_account}},
+    transaction.payment_registered_account_type {{/financial_account}}\n),\nloan_repayments
+    AS (\n    SELECT\n        t.investor_id,\n        t.offer_symbol,\n        {{#financial_account}}UPPER(t.payment_registered_account_type::text)
+    as financial_account,{{/financial_account}}\n        SUM(CASE WHEN t.status IN
+    ('complete', 'closed') THEN COALESCE(t.principal_amount, 0) ELSE 0 END) as total_principal_paid,\n
+    \       SUM(CASE WHEN t.status IN ('complete', 'closed') THEN COALESCE(t.interest_amount,
+    0) ELSE 0 END) as total_interest_paid\n    FROM transaction t\n    WHERE t.type
+    = 'loan_repayment'\n    GROUP BY t.investor_id, t.offer_symbol {{#financial_account}},
+    t.payment_registered_account_type {{/financial_account}}\n),\ntransaction_aggregates
+    AS (\n    SELECT \n        t.investor_id,\n        t.offer_symbol,\n        {{#financial_account}}UPPER(t.payment_registered_account_type::text)
+    as financial_account,{{/financial_account}}\n        SUM(CASE \n            WHEN
+    t.type = 'contribution' AND t.status IN ('complete', 'closed') THEN \n                t.amount
+    / COALESCE(NULLIF((nav->>'value')::numeric, 0), 1)\n            WHEN t.type =
+    'transfer' AND t.status IN ('complete', 'closed') AND \n                (t.transferred_from_investor_id
+    IS NOT NULL OR t.transferred_from_offer_symbol IS NOT NULL) THEN \n                t.amount
+    / COALESCE(NULLIF((nav->>'value')::numeric, 0), 1)\n            WHEN t.distribution_units
+    is not null AND t.status IN ('complete', 'closed') THEN \n                t.distribution_units\n
+    \           ELSE 0 \n        END) as total_units_in,\n        SUM(CASE \n            WHEN
+    t.type = 'redemption' AND t.status IN ('complete', 'closed') THEN \n                t.amount
+    / COALESCE(NULLIF((nav->>'value')::numeric, 0), 1)\n            ELSE 0 \n        END)
+    + COALESCE(to_amt.transfer_out_units, 0) as total_units_out,\n        SUM(CASE
+    WHEN t.type = 'contribution' AND t.status NOT IN ('complete', 'closed') THEN t.amount
+    ELSE 0 END) as pending_contribution,\n        SUM(CASE WHEN t.type = 'contribution'
+    AND t.status IN ('complete', 'closed') THEN t.amount ELSE 0 END) as contribution,\n
+    \       SUM(CASE WHEN t.type = 'redemption' AND t.status IN ('complete', 'closed')
+    THEN t.amount ELSE 0 END) as redemption,\n        SUM(CASE WHEN t.distribution_units
+    IS NOT NULL AND t.status IN ('complete', 'closed') \n            THEN t.distribution_units
+    * COALESCE(NULLIF((nav->>'value')::numeric, 0), 1) ELSE 0 END) as drip,\n        SUM(CASE
+    WHEN t.distribution_cash IS NOT NULL AND t.status IN ('complete', 'closed') \n
+    \           THEN t.distribution_cash ELSE 0 END) as cash_distribution,\n        SUM(CASE
+    WHEN t.type = 'transfer' AND t.status IN ('complete', 'closed') \n            AND
+    (t.transferred_from_investor_id IS NOT NULL OR t.transferred_from_offer_symbol
+    IS NOT NULL) \n            THEN t.amount ELSE 0 END) as transfer_in,\n        MAX(t.offer_type)
+    as offer_type\n    FROM transaction t\n    LEFT JOIN transfer_out_amounts to_amt
+    ON \n        to_amt.investor_id = t.investor_id AND\n        to_amt.offer_symbol
+    = t.offer_symbol\n    {{#financial_account}}AND UPPER(to_amt.financial_account::text)
+    = {{financial_account}} {{/financial_account}}\n    WHERE t.status NOT IN ('cancelled',
+    'rejected')\n    {{#financial_account}}AND UPPER(t.payment_registered_account_type::text)
+    = {{financial_account}} {{/financial_account}}\n    GROUP BY t.investor_id, t.offer_symbol,
+    to_amt.investor_id, to_amt.offer_symbol, to_amt.transfer_out_units {{#financial_account}},
+    t.payment_registered_account_type {{/financial_account}}\n)\nSELECT \n    a.account_number,
+    \n    e.name as entity_name,\n    CASE \n        WHEN su.first_name IS NOT NULL
+    THEN \n            pu.first_name || ' ' || pu.last_name || ' & ' || su.first_name
+    || ' ' || su.last_name  \n        ELSE \n            pu.first_name || ' ' || pu.last_name
+    \n    END as full_name, \n    ta.offer_symbol,\n    {{#financial_account}}COALESCE(ta.financial_account,
+    'CASH') as financial_account,{{/financial_account}}\n    o.name as offer_name,\n
+    \   ta.offer_type,\n    ROUND(COALESCE(NULLIF(lp.value::numeric, 0), 1), 2) as
+    latest_price,\n    ROUND(GREATEST(COALESCE((ta.total_units_in - ta.total_units_out),
+    0), 0) * COALESCE(NULLIF(lp.value::numeric, 0), 1), 2) as aum,\n    ROUND(ta.pending_contribution,
+    2) as pending_contribution,\n    ROUND(ta.contribution, 2) as contribution,\n
+    \   ROUND(ta.redemption, 2) as redemption,\n    ROUND(ta.drip, 2) as drip,\n    ROUND(ta.cash_distribution,
+    2) as cash_distribution,\n    ROUND(ta.transfer_in, 2) as transfer_in,\n    ROUND(COALESCE(to_amt.transfer_out_amount,
+    0), 2) as transfer_out,\n    ROUND(COALESCE(lr.total_principal_paid, 0), 2) as
+    principal_paid,\n    ROUND(GREATEST(CASE \n        WHEN ta.offer_type = 'debt'
+    THEN \n            ta.contribution - COALESCE(lr.total_principal_paid, 0) - \n
+    \           GREATEST(ABS(COALESCE(ta.redemption, 0) - COALESCE(to_amt.transfer_out_amount,
+    0)) - COALESCE(lr.total_interest_paid, 0), 0)\n        ELSE 0 \n    END, 0), 2)
+    as outstanding_principal,\n    ROUND(COALESCE(lr.total_interest_paid, 0), 2) as
+    interest_paid\nFROM transaction_aggregates ta\nINNER JOIN account a ON a.id =
+    ta.investor_id\nLEFT JOIN offer_latest_price lp ON lp.offer_symbol = ta.offer_symbol\nINNER
+    JOIN offer o ON o.symbol = ta.offer_symbol\nLEFT JOIN entity_profile e ON e.id
+    = a.entity_id \nLEFT JOIN user_profile pu ON pu.id = a.primary_user_id \nLEFT
+    JOIN user_profile su ON su.id = a.secondary_user_id\nLEFT JOIN transfer_out_amounts
+    to_amt ON \n    to_amt.investor_id = ta.investor_id AND \n    to_amt.offer_symbol
+    = ta.offer_symbol\nLEFT JOIN loan_repayments lr ON\n    lr.investor_id = ta.investor_id
+    AND\n    lr.offer_symbol = ta.offer_symbol\nWHERE\n  1=1\n{{#offer_symbol}} \n
+    \  AND LOWER(o.symbol) = LOWER({{offer_symbol}})\n{{/offer_symbol}}\n{{#search}}
+    \n    AND (a.account_number ILIKE '%' || LOWER({{search}}) || '%' \n    OR LOWER(o.symbol)
+    ILIKE '%' || LOWER({{search}}) || '%' \n    OR LOWER(o.name) ILIKE '%' || LOWER({{search}})
+    || '%' \n    OR LOWER(e.name) ILIKE '%' || LOWER({{search}}) || '%' \n    OR LOWER(pu.first_name
+    || ' ' || pu.last_name) ILIKE '%' || LOWER({{search}}) || '%' \n    OR LOWER(su.first_name
+    || ' ' || su.last_name) ILIKE '%' || LOWER({{search}}) || '%')\n{{/search}};"
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables:
+    - name: search
+      display_name: Search
+      variable_type: text
+    - name: financial_account
+      display_name: Financial Account
+      variable_type: select
+      default_value: ''
+      select_options:
+      - TFSA
+      - FHSA
+      - RRSP
+      - SPOUSAL_RRSP
+      - LIRA
+      - LRSP
+      - RRFP
+      - RRIF
+      - RESP
+      - SPOUSAL_RRIF
+      - LIF
+      - RLIF_FEDERAL
+      - RLSP_FEDERAL
+    - name: offer_symbol
+      display_name: Offer Symbol
+      variable_type: text
+      default_value: ''
+      reference_resource: offer
+  tags: []
+  updated_at: 2025-02-27 16:02:36.874769000 +00:00
+- id: 14
+  name: Unreviewed Veriff KYC Hits
+  sql_body: "WITH tx as (SELECT \ncoalesce(t.completed_at, t.created_at)::date as
+    transaction_date,\na.type as account_type,\nt.type as transaction_type,\nt.status
+    as transaction_status,\n'https://invest.atlasone.ca/manage/transactions/' || t.id
+    as transaction_url,\na.id as investor_account_id,\na.account_number as investor_account_number,\n'https://invest.atlasone.ca/manage/accounts/'
+    || a.id as investor_account_url,\npu.first_name as primary_user_first_name,\npu.last_name
+    as primary_user_last_name,\npu.email as primary_user_email,\npu_kyc.kyc_hits_review_status
+    as primary_user_kyc_hits_review_status,\nEXISTS (\n  SELECT 1\n  FROM jsonb_array_elements(pu_kyc.veriff_report
+    -> 'pepAndSanctions' -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch'
+    -> 'pep' -> 0 IS NOT NULL\n){{#providers}}OR (pu_kyc.onfido_report -> 'reports'
+    -> 1 -> 'breakdown' -> 'politically_exposed_person' ->> 'result' != 'clear'){{/providers}}
+    AS primary_user_pep_hit,\nEXISTS (\n  SELECT 1\n  FROM jsonb_array_elements(pu_kyc.veriff_report
+    -> 'pepAndSanctions' -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch'
+    -> 'sanctions' -> 0 IS NOT NULL\n){{#providers}}OR (pu_kyc.onfido_report -> 'reports'
+    -> 1 -> 'breakdown' -> 'sanction' ->> 'result' != 'clear'){{/providers}} AS primary_user_sanctions_hit,\n
+    EXISTS (\n  SELECT 1 \n  FROM jsonb_array_elements(pu_kyc.veriff_report -> 'pepAndSanctions'
+    -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'warnings' ->
+    0 IS NOT NULL\n){{#providers}}OR (pu_kyc.onfido_report -> 'reports' -> 1 -> 'breakdown'
+    -> 'legal_and_regulatory_warnings' ->> 'result' != 'clear'){{/providers}} AS primary_user_warnings_hit,\nEXISTS
+    (\n  SELECT 1\n  FROM jsonb_array_elements(pu_kyc.veriff_report -> 'pepAndSanctions'
+    -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'fitnessProbity'
+    -> 0 IS NOT NULL\n) AS primary_user_fitness_probity_hit,\n\n--- secondary user\nsu.first_name
+    as secondary_user_first_name,\nsu.last_name as secondary_user_last_name,\nsu.email
+    as secondary_user_email,\nsu_kyc.kyc_hits_review_status as secondary_user_kyc_hits_review_status,\nEXISTS
+    (\n  SELECT 1\n  FROM jsonb_array_elements(su_kyc.veriff_report -> 'pepAndSanctions'
+    -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'pep' -> 0 IS
+    NOT NULL\n) {{#providers}}OR (su_kyc.onfido_report -> 'reports' -> 1 -> 'breakdown'
+    -> 'politically_exposed_person' ->> 'result' != 'clear'){{/providers}} AS secondary_user_pep_hit,\nEXISTS
+    (\n  SELECT 1\n  FROM jsonb_array_elements(su_kyc.veriff_report -> 'pepAndSanctions'
+    -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'sanctions' ->
+    0 IS NOT NULL\n) {{#providers}}OR (su_kyc.onfido_report -> 'reports' -> 1 -> 'breakdown'
+    -> 'sanction' ->> 'result' != 'clear'){{/providers}} AS secondary_user_sanctions_hit,\n
+    EXISTS (\n  SELECT 1 \n  FROM jsonb_array_elements(su_kyc.veriff_report -> 'pepAndSanctions'
+    -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'warnings' ->
+    0 IS NOT NULL\n) {{#providers}}OR (su_kyc.onfido_report -> 'reports' -> 1 -> 'breakdown'
+    -> 'legal_and_regulatory_warnings' ->> 'result' != 'clear'){{/providers}} AS secondary_user_warnings_hit,\nEXISTS
+    (\n  SELECT 1\n  FROM jsonb_array_elements(su_kyc.veriff_report -> 'pepAndSanctions'
+    -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'fitnessProbity'
+    -> 0 IS NOT NULL\n) AS secondary_user_fitness_probity_hit \n\nFROM transaction
+    t \nJOIN account a ON a.id = t.investor_id\nJOIN user_profile pu ON pu.id = a.primary_user_id\nJOIN
+    kyc pu_kyc ON pu_kyc.user_id = pu.id\nLEFT JOIN user_profile su ON su.id = a.secondary_user_id\nLEFT
+    JOIN kyc su_kyc ON su_kyc.user_id = su.id\nWHERE t.type IN ('contribution', 'transfer')
+    AND t.status NOT IN ('cancelled', 'rejected')) \nSELECT CONCAT_WS(', ', \n  CASE
+    WHEN (tx.primary_user_pep_hit OR tx.secondary_user_pep_hit) THEN 'PEP' END,\n
+    \ CASE WHEN (tx.primary_user_sanctions_hit OR tx.secondary_user_sanctions_hit)
+    THEN 'Sanctions' END,\n  CASE WHEN (tx.primary_user_warnings_hit OR tx.secondary_user_warnings_hit)
+    THEN 'Warnings' END,\n  CASE WHEN (tx.primary_user_fitness_probity_hit OR tx.secondary_user_fitness_probity_hit)
+    THEN 'Fitness Probity' END\n) as kyc_hits,\ntx.* FROM tx WHERE (tx.primary_user_pep_hit
+    IS TRUE OR tx.primary_user_sanctions_hit IS TRUE OR tx.primary_user_warnings_hit
+    IS TRUE OR tx.primary_user_fitness_probity_hit IS TRUE OR tx.secondary_user_pep_hit
+    IS TRUE OR tx.secondary_user_sanctions_hit IS TRUE OR tx.secondary_user_warnings_hit
+    IS TRUE OR tx.secondary_user_fitness_probity_hit IS TRUE) \nAND \n(\ntx.primary_user_kyc_hits_review_status
+    IS NULL OR tx.primary_user_kyc_hits_review_status = 'pending' OR ((tx.secondary_user_kyc_hits_review_status
+    IS NULL OR tx.secondary_user_kyc_hits_review_status = 'pending') AND tx.secondary_user_email
+    IS NOT NULL)\n) ORDER BY tx.transaction_date DESC;    "
+  description: Transactions and users that need to be reviewed due to a kyc pep, sancations,
+    warnings or fitness probity hit.
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables:
+    - name: providers
+      display_name: Providers
+      variable_type: select
+      default_value: ''
+      select_options:
+      - include onfido
+  tags:
+  - kyc
+  updated_at: 2025-04-02 16:24:10.836104000 +00:00
+- id: 15
+  name: Last KYC'd 3 Years Ago
+  sql_body: "SELECT\nkyc.kyc_date as last_kycd_at,\n(SELECT MAX(created_at) FROM transaction
+    t WHERE t.type = 'contribution' AND t.status NOT IN ('cancelled', 'rejected')
+    AND  investor_id IN (SELECT id FROM account WHERE primary_user_id = user_profile.id
+    OR secondary_user_id = user_profile.id)) as last_invested_at,\nuser_profile.first_name
+    as first_name,\nuser_profile.last_name as last_name,\nuser_profile.email as email,\nuser_profile.phone
+    as phone,\nuser_profile.accreditation_status as accreditation_status,\nuser_profile.accreditation_criteria
+    as accreditation_qualification,\n\tkyc.provider AS kyc_provider,\n\tkyc.status
+    AS kyc_provider_status,\n\tnote.content as note,\n\tkyc.status AS kyc_questions_review_status,\nkyc.kyc_hits_review_status
+    AS kyc_hits_review_status,\n\tkyc.document_type AS document_type,\n\tkyc.document_number
+    AS document_number,\n\tkyc.document_valid_from AS document_valid_from,\n\tkyc.document_valid_to
+    AS document_valid_to,\n\tkyc.document_country AS document_country,\nEXISTS (\n
+    \ SELECT 1\n  FROM jsonb_array_elements(kyc.veriff_report -> 'pepAndSanctions'
+    -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'pep' -> 0 IS
+    NOT NULL\n) OR (kyc.onfido_report -> 'reports' -> 1 -> 'breakdown' -> 'politically_exposed_person'
+    ->> 'result' != 'clear') AS kyc_pep_hit,\nEXISTS (\n  SELECT 1\n  FROM jsonb_array_elements(kyc.veriff_report
+    -> 'pepAndSanctions' -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch'
+    -> 'sanctions' -> 0 IS NOT NULL\n) OR (kyc.onfido_report -> 'reports' -> 1 ->
+    'breakdown' -> 'sanction' ->> 'result' != 'clear') AS kyc_sanctions_hit,\n EXISTS
+    (\n  SELECT 1 \n  FROM jsonb_array_elements(kyc.veriff_report -> 'pepAndSanctions'
+    -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch' -> 'warnings' ->
+    0 IS NOT NULL\n) OR (kyc.onfido_report -> 'reports' -> 1 -> 'breakdown' -> 'legal_and_regulatory_warnings'
+    ->> 'result' != 'clear') AS kyc_warnings_hit,\nEXISTS (\n  SELECT 1\n  FROM jsonb_array_elements(kyc.veriff_report
+    -> 'pepAndSanctions' -> 'hits') AS hits\n  WHERE hits -> 'listingsRelatedToMatch'
+    -> 'fitnessProbity' -> 0 IS NOT NULL\n) AS kyc_fitness_probity_hit\n\nFROM \n\nkyc\n\nleft
+    join user_profile ON kyc.user_id = user_profile.id\nleft join note ON note.id
+    = kyc.note_id\n\nWHERE kyc_date::date <= (NOW() - INTERVAL '3 years')::date ORDER
+    BY (SELECT MAX(created_at) FROM transaction t WHERE t.type = 'contribution' AND
+    t.status NOT IN ('cancelled', 'rejected') AND  investor_id IN (SELECT id FROM
+    account WHERE primary_user_id = user_profile.id OR secondary_user_id = user_profile.id))
+    DESC NULLS LAST;"
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables: []
+  tags: []
+  updated_at: 2025-07-09 14:53:20.277123000 +00:00
+- id: 16
+  name: Contributions By Status
+  sql_body: |-
+    SELECT
+      INITCAP(REPLACE(status::text, '_', ' ')) AS "Status",
+      TO_CHAR(SUM(amount), 'L9G999G999G999G999D00') AS "Amount"
+    FROM
+      transaction
+    WHERE
+        type = 'contribution'
+    GROUP BY
+      status
+    ORDER BY
+      CASE status
+        WHEN 'pending'          THEN 1
+        WHEN 'approved'         THEN 2
+        WHEN 'payment_made'     THEN 3
+        WHEN 'payment_received' THEN 4
+        WHEN 'closed'           THEN 5
+        WHEN 'complete'         THEN 6
+        WHEN 'cancelled'        THEN 7
+        WHEN 'rejected'         THEN 8
+        ELSE 99
+      END
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables: []
+  tags: []
+  updated_at: 2025-09-17 16:56:38.417846000 +00:00
+- id: 17
+  name: Offer Counter Singing Dealing Reps
+  sql_body: "SELECT o.symbol AS \"Offer Symbol\", UPPER(o.status::text) AS \"Offer
+    Status\", o.name AS \"Offer Name\",  up.first_name || ' ' || up.last_name AS \"Dealing
+    Rep\", \n-- Extracts the province array from the JSON, converts it to text, and
+    formats it as a comma-separated string.\nREPLACE(TRIM(BOTH '[]' FROM (coalesce(odr.condition,
+    au.dealing_rep_condition)::json -> 'and' -> 0 -> 'in' -> 1)::text), '\"', '')
+    AS \"Provinces\" \nFROM offer o LEFT JOIN offer_dealing_rep odr ON o.symbol =
+    odr.offer_symbol JOIN account_user au ON odr.account_user_id = au.id JOIN user_profile
+    up ON au.user_id = up.id ORDER BY \"Provinces\" NULLS LAST;"
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables: []
+  tags: []
+  updated_at: 2025-10-24 21:35:58.810385000 +00:00
+- id: 18
+  name: Transactions And Their Dealing Reps
+  sql_body: select  user_profile.first_name || ' ' || user_profile.last_name as "Dealing
+    Rep", transaction.id as "Transaction ID",  UPPER(transaction.status::text) as
+    "Transaction Status", UPPER(transaction.service_type::text) as "Service Type",
+    transaction.created_at as "Created At", transaction.completed_at as "Completed
+    At", offer.name as "Offer Name" from transaction left join account_user on account_user.id
+    = transaction.dealing_rep_id left join user_profile on user_profile.id = account_user.user_id
+    join offer on offer.symbol = transaction.offer_symbol where transaction.type =
+    'contribution';
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables: []
+  tags: []
+  updated_at: 2025-10-24 18:24:10.985997000 +00:00
+- id: 19
+  name: Marketing Documents
+  sql_body: "SELECT\n\tdocument.mime_type AS type,\n\toffer.\"name\" AS offer_name,\n\tdocument.name
+    AS document_name\nFROM\n\tdocument\n\tJOIN offer ON offer.symbol = document.offer_symbol\nWHERE\n\tdocument.type
+    = 'offer_document'\n\t\nUNION\n\nSELECT\n  file_element->>'type' AS type,\n  offer.name
+    AS offer_name,\n  split_part(file_element->>'data', '/', -1) AS document_name\nFROM\n
+    \ offer,\n  LATERAL json_array_elements(offer.content::json) AS file_element\nWHERE\n
+    file_element->>'type' IN ('image', 'pdf')\n \n UNION \n \n SELECT 'video' as type,
+    offer.\"name\" as offer_name, video.\"name\" As document_name  FROM video join
+    offer on offer.symbol = video.offer_symbol;"
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables: []
+  tags: []
+  updated_at: 2025-10-30 18:21:13.710499000 +00:00
+- id: 20
+  name: Ongoing Relationship Matching
+  sql_body: "SELECT\n\t(\n\t\t(\n\t\t\toriginated_investments >= 2\n\t\t\tAND referral_agent_referred_investments
+    >= 1\n\t\t)\n\t\tOR (\n\t\t\toriginated_investments >= 1\n\t\t\tAND referral_agent_referred_investments
+    >= 1\n\t\t\tAND (issuer_referred_investments + investor_referred_investments)
+    >= 2\n\t\t)\n\t\tOR (issuer_referred_investments + investor_referred_investments)
+    >= 4\n\t) AS ongoing_relationship,\n\t*\nFROM\n\t(\n\t\tSELECT\n\t\t\ta.id AS
+    investor_id,\n\t\t\t(\n\t\t\t\tCASE\n\t\t\t\t\tWHEN us.first_name IS NOT NULL
+    THEN up.first_name || ' ' || up.last_name || ' & ' || us.first_name || ' ' ||
+    us.last_name\n\t\t\t\t\tWHEN ep.\"name\" IS NOT NULL THEN ep.\"name\"\n\t\t\t\t\tELSE
+    up.first_name || ' ' || up.last_name\n\t\t\t\tEND\n\t\t\t) AS investor,\n\t\t\tCASE\n\t\t\t\tWHEN
+    ra_e.\"name\" IS NOT NULL THEN ra_e.\"name\"\n\t\t\t\tELSE ra_u.first_name ||
+    ' ' || ra_u.last_name\n\t\t\tEND AS referrer,\n\t\t\tNULL AS trailing_fees,\n\t\t\tSUM(\n\t\t\t\tCASE\n\t\t\t\t\tWHEN
+    a.referrer_account_id IS NULL\n\t\t\t\t\tOR (\n\t\t\t\t\t\t(\n\t\t\t\t\t\t\tr.referral_agent_id
+    IS NULL\n\t\t\t\t\t\t\tOR a.referrer_account_id != r.referral_agent_id\n\t\t\t\t\t\t)\n\t\t\t\t\t\tAND
+    a.referrer_account_id != t.issuer_id\n\t\t\t\t\t\tAND ra.\"type\" NOT IN ('individual_investor',
+    'joint_investor', 'entity_investor')\n\t\t\t\t\t)   THEN 1\n\t\t\t\t\tELSE 0\n\t\t\t\tEND\n\t\t\t)
+    AS originated_investments,\n\t\t\tSUM(\n\t\t\t\tCASE\n\t\t\t\t\tWHEN a.referrer_account_id
+    = r.referral_agent_id THEN 1\n\t\t\t\t\tELSE 0\n\t\t\t\tEND\n\t\t\t) AS referral_agent_referred_investments,\n\t\t\tSUM(\n\t\t\t\tCASE\n\t\t\t\t\tWHEN
+    a.referrer_account_id = t.issuer_id THEN 1\n\t\t\t\t\tELSE 0\n\t\t\t\tEND\n\t\t\t)
+    AS issuer_referred_investments,\n\t\t\tSUM(\n\t\t\t\tCASE\n\t\t\t\t\tWHEN ra.\"type\"
+    IN ('individual_investor', 'joint_investor', 'entity_investor') THEN 1\n\t\t\t\t\tELSE
+    0\n\t\t\t\tEND\n\t\t\t) AS investor_referred_investments\n\t\tFROM\n\t\t\taccount
+    a\n\t\t\tINNER JOIN transaction t ON t.investor_id = a.id\n\t\t\tLEFT JOIN user_profile
+    up ON up.id = a.primary_user_id\n\t\t\tLEFT JOIN user_profile us ON us.id = a.secondary_user_id\n\t\t\tLEFT
+    JOIN entity_profile ep ON ep.id = a.entity_id\n\t\t\tLEFT JOIN account ra ON ra.id
+    = a.referrer_account_id\n\t\t\tLEFT JOIN entity_profile ra_e ON ra_e.id = ra.entity_id\n\t\t\tLEFT
+    JOIN user_profile ra_u ON ra_u.id = ra.primary_user_id\n\t\t\tLEFT JOIN account
+    iss ON iss.id = t.issuer_id\n\t\t\tLEFT JOIN entity_profile iss_e ON iss_e.id
+    = iss.entity_id\n\t\t\tLEFT JOIN offer_referrer r ON t.offer_symbol = r.offer_symbol\n\t\t\tAND
+    a.referrer_account_id = r.referral_agent_id\n\t\tWHERE\n\t\t\tt.type = 'contribution'\n\t\t\tAND
+    t.service_type = 'emd'\n\t\t\tAND t.status NOT IN ('rejected', 'cancelled')\n\t\tGROUP
+    BY\n\t\t\ta.id,\n\t\t\ta.referrer_account_id,\n\t\t\tra_e.\"name\",\n\t\t\tra_u.first_name
+    || ' ' || ra_u.last_name,\n\t\t\tCASE\n\t\t\t\tWHEN us.first_name IS NOT NULL
+    THEN up.first_name || ' ' || up.last_name || ' & ' || us.first_name || ' ' ||
+    us.last_name\n\t\t\t\tWHEN ep.\"name\" IS NOT NULL THEN ep.\"name\"\n\t\t\t\tELSE
+    up.first_name || ' ' || up.last_name\n\t\t\tEND\n\t) AS x\nORDER BY\n\t(\n\t\t(\n\t\t\toriginated_investments
+    >= 2\nAND referral_agent_referred_investments >= 1\n)\nOR (\n  originated_investments
+    >= 1\n  AND referral_agent_referred_investments >= 1\n  AND issuer_referred_investments
+    >= 2\n)\nOR (\n  issuer_referred_investments + investor_referred_investments\n)
+    >= 4\n) DESC;"
+  description:
+  preferences:
+    query_type: sql
+    database: Default
+    visualization: table
+    visualization_options: {}
+    variables: []
+  tags: []
+  updated_at: 2025-11-06 18:52:37.280170000 +00:00
+dashboards:
+- id: 2
+  title: Main
+  description:
+  preferences:
+    layout:
+    - title: Account Types
+      query_id: 2
+      size: 1x2
+    - title: Accounts Growth
+      query_id: 3
+      size: 5x2
+    - title: Contributions By Status
+      query_id: 16
+      size: 1x2
+    - title: Assets Under Management
+      query_id: 8
+      size: 1x2
+    - title: Assets Under Management by Registered Account
+      query_id: 9
+      size: 3x2
+    - title: Assets Under Management by Offer
+      query_id: 7
+      size: 6x2
+    - title: Transfers Between Offer by Financial Account
+      query_id: 10
+      size: 6x2
+    - title: Transfers Between Accounts by Offer and Financial Account
+      query_id: 12
+      size: 3x2
+    - title: Transfers Between Financial Accounts by Offer
+      query_id: 11
+      size: 3x2
+    variables: []
+  tags: []
+  updated_at: 2025-09-17 16:59:17.434475000 +00:00
+- id: 3
+  title: Investments
+  description:
+  preferences:
+    layout:
+    - title: Account Investment Overview
+      query_id: 13
+      size: 6x3
+    variables: []
+  tags: []
+  updated_at: 2025-01-21 20:26:58.495562000 +00:00
+forms: []
+alerts:
+- id: 2
+  name: Unreviewed Veriff KYC Hits
+  query_id: 14
+  to_emails: karim@atlasone.ca,george@atlasone.ca,investor@atlasone.ca
+  is_enabled: true
+  description: ''
+  preferences:
+    adapter: email
+    timezone: Eastern Time (US & Canada)
+    interval: every Monday
+    send_empty: false
+  tags:
+  - kyc
+  updated_at: 2025-01-31 20:03:43.441335000 +00:00
+- id: 3
+  name: Last KYC's 3 Years Ago
+  query_id: 15
+  to_emails: karim@atlasone.ca,investor@atlasone.ca
+  is_enabled: true
+  description: ''
+  preferences:
+    adapter: email
+    timezone: Eastern Time (US & Canada)
+    interval: every Monday
+  tags: []
+  updated_at: 2025-08-19 18:33:43.210360000 +00:00
+api_configs:
+- id: 2
+  name: origin
+  url: "/"
+  preferences: {}
+  description:
+  updated_at: 2024-02-27 22:17:56.816145000 +00:00

@@ -14,21 +14,6 @@ const configs = merge({
             loader: 'vue-loader'
           }
         ]
-      },
-      {
-        test: /\.css$/,
-        use: [
-          'css-loader',
-          'postcss-loader',
-          'sass-loader'
-        ]
-      },
-      {
-        test: /\.scss$/,
-        use: [
-          'postcss-loader',
-          'sass-loader'
-        ]
       }
     ]
   },
